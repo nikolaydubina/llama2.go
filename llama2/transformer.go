@@ -40,7 +40,7 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 	headSize := dim / config.NumHeads
 
 	// copy the token embedding into x
-	copy(x, w.TokenEmbeddingTable[(token*dim):((token+1)*dim)])
+	copy(x, w.TokenEmbeddingTable[token*dim:(token+1)*dim])
 
 	// pluck out the "pos" row of the FreqCISReal and FreqCISImag matrices
 	freqCISRealRow := w.FreqCISReal[(pos * headSize / 2):((pos + 1) * headSize / 2)]
@@ -52,9 +52,9 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 		RMSNorm(s.XB, x, w.RMSAttentionWeight[(l*dim):((l+1)*dim)])
 
 		// qkv matmuls for this position
-		MatMul(s.Q, s.XB, w.WQ[(l*dim*dim):((l+1)*dim*dim)])
-		MatMul(s.K, s.XB, w.WK[(l*dim*dim):((l+1)*dim*dim)])
-		MatMul(s.V, s.XB, w.WV[(l*dim*dim):((l+1)*dim*dim)])
+		MatMul(s.Q, s.XB, w.WQ[l*dim*dim:(l+1)*dim*dim])
+		MatMul(s.K, s.XB, w.WK[l*dim*dim:(l+1)*dim*dim])
+		MatMul(s.V, s.XB, w.WV[l*dim*dim:(l+1)*dim*dim])
 
 		// apply RoPE rotation to the q and k vectors for each head
 		for h := 0; h < config.NumHeads; h++ {
@@ -89,7 +89,7 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 			// attention scores for this head
 			att := s.Att[(h * config.SeqLen):((h + 1) * config.SeqLen)]
 			// iterate over all timesteps, including the current one
-			for t := 0; t < pos; t++ {
+			for t := 0; t <= pos; t++ {
 				// get the key vector for this head and at this timestamp
 				k := s.KeyCache[(loff + t*dim + h*headSize):(loff + (t+1)*dim + h*headSize)]
 				// calculate the attention score as teh dot product of q and k
@@ -108,26 +108,26 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 			// weighted sum of the values, store back into xb
 			for i := 0; i < headSize; i++ {
 				var val float32
-				for t := 0; t < pos; t++ {
-					val += att[t] * s.ValCache[(loff+t*dim+h*headSize+i)] // "note bad locality" — @karpathy
+				for t := 0; t <= pos; t++ {
+					val += att[t] * s.ValCache[loff+t*dim+h*headSize+i] // "note bad locality" — @karpathy
 				}
 				s.XB[(h*headSize + i)] = val
 			}
 		}
 
 		// final matmul to get the output of the attention
-		MatMul(s.XB2, s.XB, w.WO[(l*dim*dim):((l+1)*dim*dim)])
+		MatMul(s.XB2, s.XB, w.WO[l*dim*dim:(l+1)*dim*dim])
 
 		// residual connection back into x
 		Accum(x, s.XB2)
 
 		// FFN RMSNorm
-		RMSNorm(s.XB, x, w.RMSFFNWeight[(l*dim):((l+1)*dim)])
+		RMSNorm(s.XB, x, w.RMSFFNWeight[l*dim:(l+1)*dim])
 
 		// Now for FFN in PyTorch we have: self.w2(F.silu(self.w1(x)) * self.w3(x))
 		// first calculate self.w1(x) and self.w3(x)
-		MatMul(s.HB, s.XB, w.W1[(l*dim*hiddenDim):(l+1)*dim*hiddenDim])
-		MatMul(s.HB2, s.XB, w.W3[(l*dim*hiddenDim):(l+1)*dim*hiddenDim])
+		MatMul(s.HB, s.XB, w.W1[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
+		MatMul(s.HB2, s.XB, w.W3[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
 
 		// F.silu; silu(x)=x*σ, where σ(x) is the logistic sigmoid
 		for i := 0; i < hiddenDim; i++ {
@@ -140,14 +140,14 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 		}
 
 		// final matmul to get the output of the FFN
-		MatMul(s.XB, s.HB, w.W2[(l*dim*hiddenDim):((l+1)*dim*hiddenDim)])
+		MatMul(s.XB, s.HB, w.W2[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
 
 		// residual connection
 		Accum(x, s.XB)
 	}
 
 	// final RMSNorm
-	RMSNorm(x, x, w.RMSAttentionWeight)
+	RMSNorm(x, x, w.RMSFFNWeight)
 
 	// classifier into logits
 	MatMul(s.Logits, x, w.WCLS)

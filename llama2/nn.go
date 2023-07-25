@@ -19,7 +19,7 @@ func RMSNorm(o, x, weight []float32) {
 		ss += v * v
 	}
 	ss = ss / float32(len(x))
-	ss += 1e-6
+	ss += 1e-5
 	ss = 1 / float32(math.Sqrt(float64(ss)))
 	// normalize and scale
 	for i, v := range x {
@@ -29,7 +29,7 @@ func RMSNorm(o, x, weight []float32) {
 
 func SoftMax(x []float32) {
 	// find max for numerical stability
-	var max float32
+	max := x[0]
 	for _, v := range x {
 		if v > max {
 			max = v
@@ -42,8 +42,8 @@ func SoftMax(x []float32) {
 		sum += x[i]
 	}
 	// normalize
-	for i, v := range x {
-		x[i] = v / sum
+	for i := range x {
+		x[i] /= sum
 	}
 }
 
@@ -72,13 +72,11 @@ func Sample(probabilities []float32) int {
 	return len(probabilities) - 1
 }
 
-// ArgMax of v in elements 0..len(v)-1
 func ArgMax(v []float32) int {
 	max, maxi := v[0], 0
 	for i, x := range v {
 		if x > max {
-			max = x
-			maxi = i
+			max, maxi = x, i
 		}
 	}
 	return maxi

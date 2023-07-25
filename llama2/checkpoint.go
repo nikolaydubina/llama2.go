@@ -40,22 +40,22 @@ func NewTransformerWeightsFromCheckpoint(config Config, r io.Reader, isSharedWei
 	w.RMSAttentionWeight = make([]float32, (config.NumLayers * config.Dim))
 	binary.Read(r, Endian, &w.RMSAttentionWeight)
 
-	w.WQ = make([]float32, (config.NumLayers * config.NumHeads * config.Dim * config.Dim))
+	w.WQ = make([]float32, (config.NumLayers * config.Dim * config.Dim))
 	binary.Read(r, Endian, &w.WQ)
 
-	w.WK = make([]float32, (config.NumLayers * config.NumHeads * config.Dim * config.Dim))
+	w.WK = make([]float32, (config.NumLayers * config.Dim * config.Dim))
 	binary.Read(r, Endian, &w.WK)
 
-	w.WV = make([]float32, (config.NumLayers * config.NumHeads * config.Dim * config.Dim))
+	w.WV = make([]float32, (config.NumLayers * config.Dim * config.Dim))
 	binary.Read(r, Endian, &w.WV)
 
-	w.WO = make([]float32, (config.NumLayers * config.NumHeads * config.Dim * config.Dim))
+	w.WO = make([]float32, (config.NumLayers * config.Dim * config.Dim))
 	binary.Read(r, Endian, &w.WO)
 
 	w.RMSFFNWeight = make([]float32, (config.NumLayers * config.Dim))
 	binary.Read(r, Endian, &w.RMSFFNWeight)
 
-	w.W1 = make([]float32, (config.NumLayers * config.Dim * config.NumLayers * config.HiddenDim))
+	w.W1 = make([]float32, (config.NumLayers * config.Dim * config.HiddenDim))
 	binary.Read(r, Endian, &w.W1)
 
 	w.W2 = make([]float32, (config.NumLayers * config.HiddenDim * config.Dim))
@@ -67,10 +67,12 @@ func NewTransformerWeightsFromCheckpoint(config Config, r io.Reader, isSharedWei
 	w.RMSFinalWeight = make([]float32, config.Dim)
 	binary.Read(r, Endian, &w.RMSFinalWeight)
 
-	w.FreqCISReal = make([]float32, (config.SeqLen * config.Dim / 2))
+	headSize := config.Dim / config.NumHeads
+
+	w.FreqCISReal = make([]float32, (config.SeqLen * headSize / 2))
 	binary.Read(r, Endian, &w.FreqCISReal)
 
-	w.FreqCISImag = make([]float32, (config.SeqLen * config.Dim / 2))
+	w.FreqCISImag = make([]float32, (config.SeqLen * headSize / 2))
 	binary.Read(r, Endian, &w.FreqCISImag)
 
 	if isSharedWeights {

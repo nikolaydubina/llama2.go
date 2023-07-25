@@ -27,9 +27,9 @@ func NewRunState(config Config) *RunState {
 	r.Q = make([]float32, config.Dim)
 	r.K = make([]float32, config.Dim)
 	r.V = make([]float32, config.Dim)
-	r.Att = make([]float32, config.NumHeads*config.SeqLen)
+	r.Att = make([]float32, (config.NumHeads * config.SeqLen))
 	r.Logits = make([]float32, config.VocabSize)
-	r.KeyCache = make([]float32, config.NumLayers*config.SeqLen*config.Dim)
-	r.ValCache = make([]float32, config.NumLayers*config.SeqLen*config.Dim)
+	r.KeyCache = make([]float32, (config.NumLayers * config.SeqLen * config.Dim))
+	r.ValCache = make([]float32, (config.NumLayers * config.SeqLen * config.Dim))
 	return &r
 }

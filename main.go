@@ -68,7 +68,7 @@ func main() {
 
 		// sample the next token
 		if temperature == 0 {
-			// greedy maxarg sampling
+			// greedy argmax sampling
 			next = llama2.ArgMax(runState.Logits)
 		} else {
 			// apply the temperature to the logits
@@ -86,7 +86,7 @@ func main() {
 		token = next
 		pos++
 	}
+	out.Write([]byte("\n"))
 
-	log.Printf("\n")
 	log.Printf("achieved tok/s: %f\n", 1000*float64(config.SeqLen)/float64(time.Since(timeStart).Milliseconds()))
 }
