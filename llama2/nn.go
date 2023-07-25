@@ -18,7 +18,7 @@ func RMSNorm(o, x, weight []float32) {
 	for _, v := range x {
 		ss += v * v
 	}
-	ss = ss / float32(len(x))
+	ss /= float32(len(x))
 	ss += 1e-5
 	ss = 1 / float32(math.Sqrt(float64(ss)))
 	// normalize and scale

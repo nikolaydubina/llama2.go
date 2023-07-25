@@ -9,3 +9,5 @@ type Config struct {
 	VocabSize  int // usually 256 (byte level)
 	SeqLen     int // max sequence length
 }
+
+func (c Config) HeadSize() int { return c.Dim / c.NumHeads }

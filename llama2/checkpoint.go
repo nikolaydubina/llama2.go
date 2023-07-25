@@ -34,8 +34,6 @@ func NewConfigFromCheckpoint(r io.Reader) (Config, error) {
 }
 
 func NewTransformerWeightsFromCheckpoint(config Config, r io.Reader, isSharedWeights bool) TransformerWeights {
-	headSize := config.Dim / config.NumHeads
-
 	w := TransformerWeights{
 		TokenEmbeddingTable: make([]float32, (config.VocabSize * config.Dim)),
 		RMSAttentionWeight:  make([]float32, (config.NumLayers * config.Dim)),
@@ -48,8 +46,8 @@ func NewTransformerWeightsFromCheckpoint(config Config, r io.Reader, isSharedWei
 		W2:                  make([]float32, (config.NumLayers * config.HiddenDim * config.Dim)),
 		W3:                  make([]float32, (config.NumLayers * config.Dim * config.HiddenDim)),
 		RMSFinalWeight:      make([]float32, config.Dim),
-		FreqCISReal:         make([]float32, (config.SeqLen * headSize / 2)),
-		FreqCISImag:         make([]float32, (config.SeqLen * headSize / 2)),
+		FreqCISReal:         make([]float32, (config.SeqLen * config.HeadSize() / 2)),
+		FreqCISImag:         make([]float32, (config.SeqLen * config.HeadSize() / 2)),
 		WCLS:                make([]float32, (config.VocabSize * config.Dim)),
 	}
 

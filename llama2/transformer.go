@@ -5,39 +5,37 @@ import (
 )
 
 type TransformerWeights struct {
-	TokenEmbeddingTable []float32 // (vocab_size, dim)
+	TokenEmbeddingTable []float32
 
-	RMSAttentionWeight []float32 // (layer, dim) RMS Norm Weights
-	RMSFFNWeight       []float32 // (layer, dim)
+	RMSAttentionWeight []float32
+	RMSFFNWeight       []float32
+	RMSFinalWeight     []float32
 
 	// weights for mat muls
-	WQ []float32 // (layer, num_heads, dim, dim)
-	WK []float32 // (layer, num_heads, dim, dim)
-	WV []float32 // (layer, num_heads, dim, dim)
-	WO []float32 // (layer, num_heads, dim, dim)
+	WQ []float32
+	WK []float32
+	WV []float32
+	WO []float32
 
 	// weights for FFN
-	W1 []float32 // (layer, hidden_dim, dim)
-	W3 []float32 // (layer, dim, hidden_dim)
-	W2 []float32 // (layer, hidden_dim, dim)
-
-	// final RMS norm weights
-	RMSFinalWeight []float32 // (dim,)
+	W1 []float32
+	W2 []float32
+	W3 []float32
 
 	// frequency CIS for RoPE relative positional embeddings
-	FreqCISReal []float32 // (seq_len, dim/2)
-	FreqCISImag []float32 // (seq_len, dim/2)
+	FreqCISReal []float32
+	FreqCISImag []float32
 
 	// (optional) classifier weights for the logits on the last layer
-	WCLS []float32 // (vocab_size, dim)
+	WCLS []float32
 }
 
-func Transformer(token int, pos int, config Config, s *RunState, w TransformerWeights) {
+func Transformer(token int, pos int, config Config, s RunState, w TransformerWeights) {
 	// a few convenience variables
 	x := s.X
 	dim := config.Dim
 	hiddenDim := config.HiddenDim
-	headSize := dim / config.NumHeads
+	headSize := config.HeadSize()
 
 	// copy the token embedding into x
 	copy(x, w.TokenEmbeddingTable[token*dim:(token+1)*dim])
@@ -49,7 +47,7 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 	// forward all layers
 	for l := 0; l < config.NumLayers; l++ {
 		// attention RMSNorm
-		RMSNorm(s.XB, x, w.RMSAttentionWeight[(l*dim):((l+1)*dim)])
+		RMSNorm(s.XB, x, w.RMSAttentionWeight[l*dim:((l+1)*dim)])
 
 		// qkv matmuls for this position
 		MatMul(s.Q, s.XB, w.WQ[l*dim*dim:(l+1)*dim*dim])
@@ -95,7 +93,7 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 				// calculate the attention score as teh dot product of q and k
 				var score float32
 				for i := 0; i < headSize; i++ {
-					score += q[i] + k[i]
+					score += q[i] * k[i]
 				}
 				score /= float32(math.Sqrt(float64(headSize)))
 				// save the score to the attention buffer
@@ -103,7 +101,7 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 			}
 
 			// softmax the scores to get attention weights, from 0..pos inclusively
-			SoftMax(att)
+			SoftMax(att[:pos+1])
 
 			// weighted sum of the values, store back into xb
 			for i := 0; i < headSize; i++ {
