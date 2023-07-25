@@ -23,15 +23,18 @@ func main() {
 	flag.IntVar(&steps, "steps", 256, "max number of steps to run for, 0: use seq_len")
 	flag.Parse()
 
-	r, err := os.OpenFile(checkpointFilePath, os.O_RDONLY, 0)
+	checkpointFile, err := os.OpenFile(checkpointFilePath, os.O_RDONLY, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer r.Close()
+	defer checkpointFile.Close()
 
 	out := os.Stdout
 
-	config := llama2.NewConfigFromCheckpoint(r)
+	config, err := llama2.NewConfigFromCheckpoint(checkpointFile)
+	if err != nil {
+		log.Fatalf("cannot read config: %s", err)
+	}
 	log.Printf("config: %#v\n", config)
 
 	// "negative vocab size is hacky way of signaling unsahred weights. biy yikes" — @karpathy
@@ -48,7 +51,7 @@ func main() {
 
 	vocab := llama2.NewVocabFromFile(config.VocabSize, tokenizerFile)
 
-	w := llama2.NewTransformerWeightsFromCheckpoint(config, r, isSharedWeights)
+	w := llama2.NewTransformerWeightsFromCheckpoint(config, checkpointFile, isSharedWeights)
 
 	// right now we cannot run for more than config.SeqLen steps
 	if steps <= 0 || steps > config.SeqLen {
