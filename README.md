@@ -8,8 +8,8 @@ It is pure Go inference code ported from experimental implementation by [Andrej 
 
 1. get `tokenizer.bin` from [llama2.c](https://github.com/karpathy/llama2.c) (included)
 2. get weights from from [llama2.c](https://github.com/karpathy/llama2.c). `wget https://karpathy.ai/llama2c/model44m.bin -P out44m`
-3. `go install github.com/nikolaydubina/llama2.go`
-4. `llama2.go --checkpoint out44m/model44m.bin`
+3. `go install github.com/nikolaydubina/llama2.go@latest`
+4. `llama2.go -checkpoint out44m/model44m.bin`
 
 Example output:
 
