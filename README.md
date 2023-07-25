@@ -4,7 +4,7 @@ Native Go version of [llama2.c](https://github.com/karpathy/llama2.c).
 
 It is pure Go inference code ported from experimental implementation by [Andrej Karpathy](https://en.wikipedia.org/wiki/Andrej_Karpathy) of latest as of `2023-07-25` LLM model from Meta [LLAMA-2](https://ai.meta.com/llama/).  
 
-## How to run?
+### How to run?
 
 1. get `tokenizer.bin` from [llama2.c](https://github.com/karpathy/llama2.c) (included)
 2. get weights from from [llama2.c](https://github.com/karpathy/llama2.c). `wget https://karpathy.ai/llama2c/model44m.bin -P out44m`
@@ -26,11 +26,11 @@ Amy and Tom were very happy. They shared the fruit and became good friends. The 
 2023/07/26 02:50:18 achieved tok/s: 79.993750
 ````
 
-## Differences from `llama2.c`
+### Differences from `llama2.c`
 
 * for checkpoint not using `mmap`, instead scanning file
 
-## Performance
+### Performance
 
 ```
 llama.c
@@ -40,11 +40,11 @@ llama.go
 achieved tok/s: 80.839978
 ```
 
-## Issues
+### Issues
 
 * temperature is too sensitive. to get good results set temperature < 0.2. Original `llama2.c` handles temperatures much better. Using `float64` in Go does not help. Investigation why this is so needed.
 
-## References
+### References
 
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs
