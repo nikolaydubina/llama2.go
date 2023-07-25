@@ -37,8 +37,8 @@ func SoftMax(x []float32) {
 	}
 	// exp and sum
 	var sum float32
-	for i, v := range x {
-		x[i] = float32(math.Exp(float64(v - max)))
+	for i := range x {
+		x[i] = float32(math.Exp(float64(x[i] - max)))
 		sum += x[i]
 	}
 	// normalize

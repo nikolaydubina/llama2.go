@@ -15,7 +15,14 @@ It is pure Go inference code ported from experimental implementation by [Andrej 
 
 Example output:
 ```
-
+$ go run main.go -temperature=0 -checkpoint out44m/model44m.bin
+2023/07/26 01:52:56 config: llama2.Config{Dim:512, HiddenDim:1376, NumLayers:8, NumHeads:8, NumKVHeads:8, VocabSize:32000, SeqLen:1024}
+ Once upon a time, there was a little girl named Lily. She loved to play outside in the sunshine. One day, she went for a walk in the forest with her mommy. They saw many trees and flowers. Suddenly, Lily saw a big, scary bear! She was very scared and didn't know what to do.
+Her mommy told her to stay still and not move. The bear sniffed around them and then walked away. Lily was relieved and happy that she didn't get hurt. Her mommy told her that it's important to always stay safe and not wander off alone.
+From that day on, Lily always remembered to stay close to her mommy when they went for walks in the forest. She learned that it's important to be careful and not wander off alone.
+<s>
+ Once upon a time, there was a little girl named Lily. She loved to play outside in the sunshine. One day, she went for a walk in the forest with her mommy. They saw many trees and flowers. Suddenly, Lily saw a big, scary bear! She was very scared and didn't know what to
+2023/07/26 01:53:09 achieved tok/s: 80.839978
 ```
 
 ## Differences from `llama2.c`
@@ -24,11 +31,12 @@ Example output:
 
 ## Performance
 
-
-
 ```
 llama.c
 achieved tok/s: 125.860374
+
+llama.go
+achieved tok/s: 80.839978
 ```
 
 ## References
