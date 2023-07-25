@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-var Endianess = binary.LittleEndian
+var Endian = binary.LittleEndian
 
 func NewConfigFromCheckpoint(r io.Reader) Config {
 	// binary reader expects exact binary size for int
@@ -19,7 +19,7 @@ func NewConfigFromCheckpoint(r io.Reader) Config {
 		VocabSize  int32
 		SeqLen     int32
 	}
-	if err := binary.Read(r, Endianess, &config32); err != nil {
+	if err := binary.Read(r, Endian, &config32); err != nil {
 		fmt.Println("binary.Read failed:", err)
 	}
 	return Config{
@@ -35,49 +35,49 @@ func NewConfigFromCheckpoint(r io.Reader) Config {
 
 func NewTransformerWeightsFromCheckpoint(config Config, r io.Reader, isSharedWeights bool) (w TransformerWeights) {
 	w.TokenEmbeddingTable = make([]float32, (config.VocabSize * config.Dim))
-	binary.Read(r, Endianess, &w.TokenEmbeddingTable)
+	binary.Read(r, Endian, &w.TokenEmbeddingTable)
 
 	w.RMSAttentionWeight = make([]float32, (config.NumLayers * config.Dim))
-	binary.Read(r, Endianess, &w.RMSAttentionWeight)
+	binary.Read(r, Endian, &w.RMSAttentionWeight)
 
 	w.WQ = make([]float32, (config.NumLayers * config.NumHeads * config.Dim * config.Dim))
-	binary.Read(r, Endianess, &w.WQ)
+	binary.Read(r, Endian, &w.WQ)
 
 	w.WK = make([]float32, (config.NumLayers * config.NumHeads * config.Dim * config.Dim))
-	binary.Read(r, Endianess, &w.WK)
+	binary.Read(r, Endian, &w.WK)
 
 	w.WV = make([]float32, (config.NumLayers * config.NumHeads * config.Dim * config.Dim))
-	binary.Read(r, Endianess, &w.WV)
+	binary.Read(r, Endian, &w.WV)
 
 	w.WO = make([]float32, (config.NumLayers * config.NumHeads * config.Dim * config.Dim))
-	binary.Read(r, Endianess, &w.WO)
+	binary.Read(r, Endian, &w.WO)
 
 	w.RMSFFNWeight = make([]float32, (config.NumLayers * config.Dim))
-	binary.Read(r, Endianess, &w.RMSFFNWeight)
+	binary.Read(r, Endian, &w.RMSFFNWeight)
 
 	w.W1 = make([]float32, (config.NumLayers * config.Dim * config.NumLayers * config.HiddenDim))
-	binary.Read(r, Endianess, &w.W1)
+	binary.Read(r, Endian, &w.W1)
 
 	w.W2 = make([]float32, (config.NumLayers * config.HiddenDim * config.Dim))
-	binary.Read(r, Endianess, &w.W2)
+	binary.Read(r, Endian, &w.W2)
 
 	w.W3 = make([]float32, (config.NumLayers * config.Dim * config.HiddenDim))
-	binary.Read(r, Endianess, &w.W3)
+	binary.Read(r, Endian, &w.W3)
 
 	w.RMSFinalWeight = make([]float32, config.Dim)
-	binary.Read(r, Endianess, &w.RMSFinalWeight)
+	binary.Read(r, Endian, &w.RMSFinalWeight)
 
 	w.FreqCISReal = make([]float32, (config.SeqLen * config.Dim / 2))
-	binary.Read(r, Endianess, &w.FreqCISReal)
+	binary.Read(r, Endian, &w.FreqCISReal)
 
 	w.FreqCISImag = make([]float32, (config.SeqLen * config.Dim / 2))
-	binary.Read(r, Endianess, &w.FreqCISImag)
+	binary.Read(r, Endian, &w.FreqCISImag)
 
 	if isSharedWeights {
 		w.WCLS = w.TokenEmbeddingTable
 	} else {
 		w.WCLS = make([]float32, (config.VocabSize * config.Dim))
-		binary.Read(r, Endianess, &w.WCLS)
+		binary.Read(r, Endian, &w.WCLS)
 	}
 
 	return w

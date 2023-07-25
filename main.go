@@ -32,6 +32,7 @@ func main() {
 	out := os.Stdout
 
 	config := llama2.NewConfigFromCheckpoint(r)
+	log.Printf("config: %#v\n", config)
 
 	// "negative vocab size is hacky way of signaling unsahred weights. biy yikes" — @karpathy
 	isSharedWeights := config.VocabSize > 0
@@ -45,7 +46,7 @@ func main() {
 	}
 	defer tokenizerFile.Close()
 
-	vocab := llama2.NewVocabFromFile(config.VocabSize, r)
+	vocab := llama2.NewVocabFromFile(config.VocabSize, tokenizerFile)
 
 	w := llama2.NewTransformerWeightsFromCheckpoint(config, r, isSharedWeights)
 
@@ -86,5 +87,6 @@ func main() {
 		pos++
 	}
 
+	log.Printf("\n")
 	log.Printf("achieved tok/s: %f\n", 1000*float64(config.SeqLen)/float64(time.Since(timeStart).Milliseconds()))
 }

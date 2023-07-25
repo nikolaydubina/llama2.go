@@ -62,7 +62,7 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 			q := s.Q[(h * headSize):((h + 1) * headSize)]
 			k := s.K[(h * headSize):((h + 1) * headSize)]
 			// rotate q and k by the FreqCISReal and FreqCISImag
-			for i := 0; i < headSize; i++ {
+			for i := 0; i < headSize; i += 2 {
 				q0, q1 := q[i], q[i+1]
 				k0, k1 := k[i], k[i+1]
 				fcr := freqCISRealRow[i/2]
@@ -76,8 +76,8 @@ func Transformer(token int, pos int, config Config, s *RunState, w TransformerWe
 
 		// save ke,value at this time step (pos) to our kv cache
 		loff := l * config.SeqLen * dim
-		keyCacheRow := s.KeyCache[(loff * pos * dim):(loff * (pos + 1) * dim)] // ? how many? dim?
-		valCacheRow := s.ValCache[(loff * pos * dim):(loff * (pos + 1) * dim)] // ? how many? dim?
+		keyCacheRow := s.KeyCache[(loff + pos*dim):(loff + (pos+1)*dim)]
+		valCacheRow := s.ValCache[(loff + pos*dim):(loff + (pos+1)*dim)]
 		copy(keyCacheRow, s.K)
 		copy(valCacheRow, s.V)
 
