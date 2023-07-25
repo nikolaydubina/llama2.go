@@ -14,7 +14,7 @@ It is pure Go inference code ported from experimental implementation by [Andrej 
 Example output:
 
 ```
-go run main.go -temperature=0.1 -checkpoint out44m/model44m.bin
+$ llama2.go -temperature=0.1 -checkpoint out44m/model44m.bin
 2023/07/26 02:50:05 config: llama2.Config{Dim:512, HiddenDim:1376, NumLayers:8, NumHeads:8, NumKVHeads:8, VocabSize:32000, SeqLen:1024}
  One day, a little girl named Amy went to the park. She saw a big tree with a lot of fruit. The fruit was red, yellow, and green. Amy wanted to eat the fruit, but she was too small to reach it. She felt sad.
 A tall boy named Tom saw Amy and asked, "Why are you sad?" Amy said, "I want to eat the fruit, but I am too small to reach it." Tom was a creative boy. He thought for a moment and said, "Let's think of a way to get the fruit."
