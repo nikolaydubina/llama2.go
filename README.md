@@ -14,6 +14,7 @@ It is pure Go inference code ported from experimental implementation by [Andrej 
 4. `llama2.go --checkpoint out44m/model44m.bin`
 
 Example output:
+
 ```
 $ go run main.go -temperature=0 -checkpoint out44m/model44m.bin
 2023/07/26 01:52:56 config: llama2.Config{Dim:512, HiddenDim:1376, NumLayers:8, NumHeads:8, NumKVHeads:8, VocabSize:32000, SeqLen:1024}
