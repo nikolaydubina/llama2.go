@@ -2,8 +2,6 @@
 
 Native Go version of [llama2.c](https://github.com/karpathy/llama2.c).
 
-## Wait what?
-
 It is pure Go inference code ported from experimental implementation by [Andrej Karpathy](https://en.wikipedia.org/wiki/Andrej_Karpathy) of latest as of `2023-07-25` LLM model from Meta [LLAMA-2](https://ai.meta.com/llama/).  
 
 ## How to run?
@@ -24,7 +22,7 @@ From that day on, Lily always remembered to stay close to her mommy when they we
 <s>
  Once upon a time, there was a little girl named Lily. She loved to play outside in the sunshine. One day, she went for a walk in the forest with her mommy. They saw many trees and flowers. Suddenly, Lily saw a big, scary bear! She was very scared and didn't know what to
 2023/07/26 01:53:09 achieved tok/s: 80.839978
-```
+````
 
 ## Differences from `llama2.c`
 
