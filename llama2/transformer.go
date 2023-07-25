@@ -129,7 +129,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 
 		// F.silu; silu(x)=x*σ, where σ(x) is the logistic sigmoid
 		for i := 0; i < hiddenDim; i++ {
-			s.HB[i] = s.HB[i] * float32(1.0/(1.0+math.Exp(-float64(s.HB[i]))))
+			s.HB[i] /= (1.0 + float32(math.Exp(-float64(s.HB[i]))))
 		}
 
 		// elementwise multiply with w3(x)

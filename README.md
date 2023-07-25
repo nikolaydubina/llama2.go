@@ -14,14 +14,16 @@ It is pure Go inference code ported from experimental implementation by [Andrej 
 Example output:
 
 ```
-$ go run main.go -temperature=0 -checkpoint out44m/model44m.bin
-2023/07/26 01:52:56 config: llama2.Config{Dim:512, HiddenDim:1376, NumLayers:8, NumHeads:8, NumKVHeads:8, VocabSize:32000, SeqLen:1024}
- Once upon a time, there was a little girl named Lily. She loved to play outside in the sunshine. One day, she went for a walk in the forest with her mommy. They saw many trees and flowers. Suddenly, Lily saw a big, scary bear! She was very scared and didn't know what to do.
-Her mommy told her to stay still and not move. The bear sniffed around them and then walked away. Lily was relieved and happy that she didn't get hurt. Her mommy told her that it's important to always stay safe and not wander off alone.
-From that day on, Lily always remembered to stay close to her mommy when they went for walks in the forest. She learned that it's important to be careful and not wander off alone.
+go run main.go -temperature=0.1 -checkpoint out44m/model44m.bin
+2023/07/26 02:50:05 config: llama2.Config{Dim:512, HiddenDim:1376, NumLayers:8, NumHeads:8, NumKVHeads:8, VocabSize:32000, SeqLen:1024}
+ One day, a little girl named Amy went to the park. She saw a big tree with a lot of fruit. The fruit was red, yellow, and green. Amy wanted to eat the fruit, but she was too small to reach it. She felt sad.
+A tall boy named Tom saw Amy and asked, "Why are you sad?" Amy said, "I want to eat the fruit, but I am too small to reach it." Tom was a creative boy. He thought for a moment and said, "Let's think of a way to get the fruit."
+They tried to jump and climb, but they still could not reach the fruit. Then, Tom had an idea. He said, "Let's ask the tree
+ for help." They asked the tree, and the tree shook its leaves. The fruit fell down, and Amy could reach it.
+Amy and Tom were very happy. They shared the fruit and became good friends. The tree was happy too, because it could help them.
 <s>
- Once upon a time, there was a little girl named Lily. She loved to play outside in the sunshine. One day, she went for a walk in the forest with her mommy. They saw many trees and flowers. Suddenly, Lily saw a big, scary bear! She was very scared and didn't know what to
-2023/07/26 01:53:09 achieved tok/s: 80.839978
+ Once upon a time, there was a big house with a big lawn. The lawn was so large that it looked like an enormous ball. One day, a little boy came to play on the lawn.
+2023/07/26 02:50:18 achieved tok/s: 79.993750
 ````
 
 ## Differences from `llama2.c`
@@ -37,6 +39,10 @@ achieved tok/s: 125.860374
 llama.go
 achieved tok/s: 80.839978
 ```
+
+## Issues
+
+* temperature is too sensitive. to get good results set temperature < 0.2. Original `llama2.c` handles temperatures much better. Using `float64` in Go does not help. Investigation why this is so needed.
 
 ## References
 
