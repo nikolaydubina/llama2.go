@@ -48,3 +48,4 @@ achieved tok/s: 80.839978
 
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs
+* https://github.com/gotzmann/llama.go
