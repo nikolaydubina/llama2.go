@@ -90,7 +90,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 			for t := 0; t <= pos; t++ {
 				// get the key vector for this head and at this timestamp
 				k := s.KeyCache[(loff + t*dim + h*headSize):(loff + (t+1)*dim + h*headSize)]
-				// calculate the attention score as teh dot product of q and k
+				// calculate the attention score as the dot product of q and k
 				var score float32
 				for i := 0; i < headSize; i++ {
 					score += q[i] * k[i]
