@@ -74,3 +74,26 @@ func TestArgMax(t *testing.T) {
 		})
 	}
 }
+
+func TestMatMul(t *testing.T) {
+	tests := []struct {
+		x   []float32
+		w   []float32
+		exp []float32
+	}{
+		{
+			x:   []float32{1, 2, 3},
+			w:   []float32{1, 2, 3, 4, 5, 6},
+			exp: []float32{1 + 4 + 9, 4 + 10 + 18},
+		},
+	}
+	for i, tc := range tests {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			got := make([]float32, len(tc.exp))
+			MatMul(got, tc.x, tc.w)
+			if diff := cmp.Diff(tc.exp, got); diff != "" {
+				t.Errorf("%s", diff)
+			}
+		})
+	}
+}

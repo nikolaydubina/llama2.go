@@ -14,16 +14,12 @@ It is pure Go inference code ported from experimental implementation by [Andrej 
 Example output:
 
 ```
-$ llama2.go -temperature=0.1 -checkpoint out44m/model44m.bin
-2023/07/26 02:50:05 config: llama2.Config{Dim:512, HiddenDim:1376, NumLayers:8, NumHeads:8, NumKVHeads:8, VocabSize:32000, SeqLen:1024}
- One day, a little girl named Amy went to the park. She saw a big tree with a lot of fruit. The fruit was red, yellow, and green. Amy wanted to eat the fruit, but she was too small to reach it. She felt sad.
-A tall boy named Tom saw Amy and asked, "Why are you sad?" Amy said, "I want to eat the fruit, but I am too small to reach it." Tom was a creative boy. He thought for a moment and said, "Let's think of a way to get the fruit."
-They tried to jump and climb, but they still could not reach the fruit. Then, Tom had an idea. He said, "Let's ask the tree
- for help." They asked the tree, and the tree shook its leaves. The fruit fell down, and Amy could reach it.
-Amy and Tom were very happy. They shared the fruit and became good friends. The tree was happy too, because it could help them.
+$ llama2.go -temperature=0.9 -checkpoint=out44m/model44m.bin
+2023/07/28 00:50:48 config: llama2.Config{Dim:512, HiddenDim:1376, NumLayers:8, NumHeads:8, NumKVHeads:8, VocabSize:32000, SeqLen:1024}
+ Once upon a time, there was a boy named Timmy who loved playing with his toy cars. One day, Timmy's friend Billy came over to play. Timmy showed Billy his favorite car, which was a red one with big black wheels. Billy said, "Wow, that car is cool! Can I play with it too?" Timmy thought about it and said, "Sure, but be careful not to shoot it too hard or it might break."
+Billy drove the car around the room, making car noises. Suddenly, the car hit a rope that was hanging from the ceiling. Timmy said, "Oh no, now we have to fix it!" Billy said, "I'm sorry, I didn't mean to. Let's ask your dad to help us." Timmy's dad came in and fixed the problem. He said, "Wow, that was impressive! You two are amazing at fixing things." Timmy and Billy smiled and continued playing with the car.
 <s>
- Once upon a time, there was a big house with a big lawn. The lawn was so large that it looked like an enormous ball. One day, a little boy came to play on the lawn.
-2023/07/26 02:50:18 achieved tok/s: 79.993750
+ Once upon a time, there was a little boy named Timmy. Timmy loved to play outside in the yard. One day, he found a big bowl and
 ````
 
 ### Differences from `llama2.c`
@@ -37,12 +33,8 @@ llama.c
 achieved tok/s: 125.860374
 
 llama.go
-achieved tok/s: 80.839978
+achieved tok/s: 80.302906
 ```
-
-### Issues
-
-* temperature is too sensitive. to get good results set temperature < 0.2. Original `llama2.c` handles temperatures much better. Using `float64` in Go does not help. Investigation why this is so needed.
 
 ### Related Work
 

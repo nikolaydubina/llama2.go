@@ -72,7 +72,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 			}
 		}
 
-		// save ke,value at this time step (pos) to our kv cache
+		// save key,value at this time step (pos) to our kv cache
 		loff := l * config.SeqLen * dim
 		keyCacheRow := s.KeyCache[(loff + pos*dim):(loff + (pos+1)*dim)]
 		valCacheRow := s.ValCache[(loff + pos*dim):(loff + (pos+1)*dim)]
@@ -134,7 +134,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 
 		// elementwise multiply with w3(x)
 		for i := 0; i < hiddenDim; i++ {
-			s.HB[i] = s.HB[i] * s.HB2[i]
+			s.HB[i] *= s.HB2[i]
 		}
 
 		// final matmul to get the output of the FFN
@@ -145,7 +145,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 	}
 
 	// final RMSNorm
-	RMSNorm(x, x, w.RMSFFNWeight)
+	RMSNorm(x, x, w.RMSFinalWeight)
 
 	// classifier into logits
 	MatMul(s.Logits, x, w.WCLS)

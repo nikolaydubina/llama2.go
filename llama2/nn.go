@@ -20,10 +20,10 @@ func RMSNorm(o, x, weight []float32) {
 	}
 	ss /= float32(len(x))
 	ss += 1e-5
-	ss = 1 / float32(math.Sqrt(float64(ss)))
+	ss = float32(math.Sqrt(float64(ss)))
 	// normalize and scale
-	for i, v := range x {
-		o[i] = weight[i] * (v * ss)
+	for i := range o {
+		o[i] = weight[i] * x[i] / ss
 	}
 }
 
@@ -73,10 +73,10 @@ func Sample(probabilities []float32) int {
 }
 
 func ArgMax(v []float32) int {
-	max, maxi := v[0], 0
-	for i, x := range v {
-		if x > max {
-			max, maxi = x, i
+	maxi, maxv := 0, v[0]
+	for i, v := range v {
+		if v > maxv {
+			maxv, maxi = v, i
 		}
 	}
 	return maxi

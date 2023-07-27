@@ -64,8 +64,7 @@ func main() {
 	timeStart := time.Now()
 	var next int
 	var token int = 1 // 1 = BOS token in llama-2 sentencepiece
-	var pos int = 0
-	for pos < steps {
+	for pos := 0; pos < steps; pos++ {
 		// forward the transformer to get logits for the next token
 		llama2.Transformer(token, pos, config, runState, w)
 
@@ -87,9 +86,8 @@ func main() {
 
 		// advance forward
 		token = next
-		pos++
 	}
 	out.Write([]byte("\n"))
 
-	log.Printf("achieved tok/s: %f\n", 1000*float64(config.SeqLen)/float64(time.Since(timeStart).Milliseconds()))
+	log.Printf("achieved tok/s: %f\n", float64(config.SeqLen)/time.Since(timeStart).Seconds())
 }
