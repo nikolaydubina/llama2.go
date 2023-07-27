@@ -26,7 +26,7 @@ jobs:
       run: go get -v -t -d ./...
 
     - name: Test that can build
-      run: go build
+      run: go build -o llama2go
 
     - name: Test
       run: go test -v -coverprofile=coverage.txt -covermode=atomic ./... 
