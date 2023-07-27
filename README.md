@@ -44,7 +44,7 @@ achieved tok/s: 80.839978
 
 * temperature is too sensitive. to get good results set temperature < 0.2. Original `llama2.c` handles temperatures much better. Using `float64` in Go does not help. Investigation why this is so needed.
 
-### References
+### Related Work
 
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs
