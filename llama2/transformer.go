@@ -104,12 +104,15 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 			SoftMax(att[:pos+1])
 
 			// weighted sum of the values, store back into xb
+			// llama2.c uses memset. resetting to zero in loop is ok since it is next iterated over same slice anyways.
 			for i := 0; i < headSize; i++ {
-				var val float32
-				for t := 0; t <= pos; t++ {
-					val += att[t] * s.ValCache[loff+t*dim+h*headSize+i] // "note bad locality" — @karpathy
+				s.XB[(h*headSize + i)] = 0
+			}
+			for t := 0; t <= pos; t++ {
+				a := att[t]
+				for i := 0; i < headSize; i++ {
+					s.XB[((h * headSize) + i)] += a * s.ValCache[loff+t*dim+h*headSize+i]
 				}
-				s.XB[(h*headSize + i)] = val
 			}
 		}
 
