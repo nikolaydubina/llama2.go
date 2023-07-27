@@ -49,6 +49,6 @@ achieved tok/s: 80.839978
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs
 * https://github.com/gotzmann/llama.go
-* https://github.com/tmc/go-llama2 (there: fork; slices, no 3rd party)
-* https://github.com/haormj/llama2.go (there: 3rd party; cobra; makefile; )
-* https://github.com/saracen/llama2.go (there: `mmap`; go routines; single file; no 3rd party)
+* https://github.com/tmc/go-llama2 (there: fork; slices, no 3rd party; single file)
+* https://github.com/haormj/llama2.go (there: slices; 3rd party; cobra; makefile; single file)
+* https://github.com/saracen/llama2.go (there: `mmap`; no 3rd party; go routines; single file)
