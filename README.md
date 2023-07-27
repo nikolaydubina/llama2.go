@@ -1,5 +1,6 @@
 ## llama2.go
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/nikolaydubina/llama2.go)](https://goreportcard.com/report/github.com/nikolaydubina/llama2.go)
 [![codecov](https://codecov.io/gh/nikolaydubina/llama2.go/branch/master/graph/badge.svg?token=OMf0git2BD)](https://codecov.io/gh/nikolaydubina/llama2.go)
 
 Native Go version of [llama2.c](https://github.com/karpathy/llama2.c).
