@@ -5,29 +5,29 @@ import (
 	"math/rand"
 )
 
-func Accum(a, b []float32) {
+func Acc[T float32 | float64](a, b []T) {
 	for i := range a {
 		a[i] += b[i]
 	}
 }
 
 // RMSNorm is Root Mean Square Normalization
-func RMSNorm(o, x, weight []float32) {
+func RMSNorm[T float32 | float64](o, x, weight []T) {
 	// calculate sum of squares
-	var ss float32
+	var ss T
 	for _, v := range x {
 		ss += v * v
 	}
-	ss /= float32(len(x))
+	ss /= T(len(x))
 	ss += 1e-5
-	ss = float32(math.Sqrt(float64(ss)))
+	ss = T(math.Sqrt(float64(ss)))
 	// normalize and scale
 	for i := range o {
 		o[i] = weight[i] * x[i] / ss
 	}
 }
 
-func SoftMax(x []float32) {
+func SoftMax[T float32 | float64](x []T) {
 	// find max for numerical stability
 	max := x[0]
 	for _, v := range x {
@@ -36,9 +36,9 @@ func SoftMax(x []float32) {
 		}
 	}
 	// exp and sum
-	var sum float32
+	var sum T
 	for i := range x {
-		x[i] = float32(math.Exp(float64(x[i] - max)))
+		x[i] = T(math.Exp(float64(x[i] - max)))
 		sum += x[i]
 	}
 	// normalize
@@ -49,9 +49,9 @@ func SoftMax(x []float32) {
 
 // MatMul: W (d,n) @ x (n,) -> xout (d,)
 // C code was parallelized with pargma OMP
-func MatMul(xout, x, w []float32) {
+func MatMul[T float32 | float64](xout, x, w []T) {
 	for i := range xout {
-		var sum float32
+		var sum T
 		for j := range x {
 			sum += w[i*len(x)+j] * x[j]
 		}
@@ -60,9 +60,9 @@ func MatMul(xout, x, w []float32) {
 }
 
 // Sample index from probabilities, they must sum to 1
-func Sample(probabilities []float32) int {
-	r := rand.Float32()
-	var cdf float32
+func Sample[T float32 | float64](probabilities []T) int {
+	r := T(rand.Float32())
+	var cdf T
 	for i, p := range probabilities {
 		cdf += p
 		if r < cdf {
@@ -72,7 +72,7 @@ func Sample(probabilities []float32) int {
 	return len(probabilities) - 1
 }
 
-func ArgMax(v []float32) int {
+func ArgMax[T float32 | float64](v []T) int {
 	maxi, maxv := 0, v[0]
 	for i, v := range v {
 		if v > maxv {

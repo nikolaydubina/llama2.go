@@ -120,7 +120,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 		MatMul(s.XB2, s.XB, w.WO[l*dim*dim:(l+1)*dim*dim])
 
 		// residual connection back into x
-		Accum(x, s.XB2)
+		Acc(x, s.XB2)
 
 		// FFN RMSNorm
 		RMSNorm(s.XB, x, w.RMSFFNWeight[l*dim:(l+1)*dim])
@@ -144,7 +144,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 		MatMul(s.XB, s.HB, w.W2[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
 
 		// residual connection
-		Accum(x, s.XB)
+		Acc(x, s.XB)
 	}
 
 	// final RMSNorm

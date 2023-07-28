@@ -7,12 +7,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestAccum(t *testing.T) {
+func TestAcc(t *testing.T) {
 	a := []float32{1, 2, 3, 0, -1}
 	b := []float32{4, 5, 6, 0, 1}
-	Accum(a, b)
+	Acc(a, b)
 	if a[0] != 5 || a[1] != 7 || a[2] != 9 || a[3] != 0 || a[4] != 0 {
-		t.Errorf("Accum failed")
+		t.Errorf("Acc failed")
 	}
 }
 
