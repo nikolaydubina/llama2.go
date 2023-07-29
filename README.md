@@ -49,7 +49,7 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs
-* https://github.com/saracen/llama2.go (there: `mmap`; no 3rd party; go routines; single file; prompt; profiling)
+* https://github.com/saracen/llama2.go (there: `mmap`; no 3rd party; go routines; single file; prompt; profiling) — another very good llama2.go port
 * https://github.com/tmc/go-llama2 (there: fork; slices, no 3rd party; single file)
 * https://github.com/haormj/llama2.go (there: slices; 3rd party; cobra; makefile; single file)
 * https://github.com/gotzmann/llama.go
