@@ -1,4 +1,4 @@
-package llama2
+package nn
 
 import (
 	"math"

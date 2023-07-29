@@ -20,7 +20,8 @@
 # Go workspace file
 go.work
 
-out/
-out44m/
-llama2.go
-b
+# models
+stories110M.bin
+stories42M.bin
+
+m

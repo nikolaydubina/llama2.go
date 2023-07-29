@@ -1,16 +1,17 @@
-package llama2
+package nn_test
 
 import (
 	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/nikolaydubina/llama2.go/nn"
 )
 
 func TestAcc(t *testing.T) {
 	a := []float32{1, 2, 3, 0, -1}
 	b := []float32{4, 5, 6, 0, 1}
-	Acc(a, b)
+	nn.Acc(a, b)
 	if a[0] != 5 || a[1] != 7 || a[2] != 9 || a[3] != 0 || a[4] != 0 {
 		t.Errorf("Acc failed")
 	}
@@ -36,7 +37,7 @@ func TestSoftMax(t *testing.T) {
 	}
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("%d: %#v", i, tc), func(t *testing.T) {
-			SoftMax(tc.x)
+			nn.SoftMax(tc.x)
 			if diff := cmp.Diff(tc.exp, tc.x); diff != "" {
 				t.Errorf("%s", diff)
 			}
@@ -68,7 +69,7 @@ func TestArgMax(t *testing.T) {
 	}
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("%d: %#v", i, tc), func(t *testing.T) {
-			if got := ArgMax(tc.x); got != tc.exp {
+			if got := nn.ArgMax(tc.x); got != tc.exp {
 				t.Errorf("got %d, exp %d", got, tc.exp)
 			}
 		})
@@ -90,7 +91,7 @@ func TestMatMul(t *testing.T) {
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			got := make([]float32, len(tc.exp))
-			MatMul(got, tc.x, tc.w)
+			nn.MatMul(got, tc.x, tc.w)
 			if diff := cmp.Diff(tc.exp, got); diff != "" {
 				t.Errorf("%s", diff)
 			}
