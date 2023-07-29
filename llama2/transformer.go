@@ -2,6 +2,7 @@ package llama2
 
 import (
 	"math"
+	"sync"
 
 	"github.com/nikolaydubina/llama2.go/nn"
 )
@@ -33,6 +34,8 @@ type TransformerWeights struct {
 }
 
 func Transformer(token int, pos int, config Config, s RunState, w TransformerWeights) {
+	var wg sync.WaitGroup
+
 	// a few convenience variables
 	x := s.X
 	dim := config.Dim
@@ -52,9 +55,11 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 		nn.RMSNorm(s.XB, x, w.RMSAttentionWeight[l*dim:((l+1)*dim)])
 
 		// qkv matmuls for this position
-		nn.MatMul(s.Q, s.XB, w.WQ[l*dim*dim:(l+1)*dim*dim])
-		nn.MatMul(s.K, s.XB, w.WK[l*dim*dim:(l+1)*dim*dim])
-		nn.MatMul(s.V, s.XB, w.WV[l*dim*dim:(l+1)*dim*dim])
+		wg.Add(3)
+		go func() { nn.MatMul(s.Q, s.XB, w.WQ[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
+		go func() { nn.MatMul(s.K, s.XB, w.WK[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
+		go func() { nn.MatMul(s.V, s.XB, w.WV[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
+		wg.Wait()
 
 		// apply RoPE rotation to the q and k vectors for each head
 		for h := 0; h < config.NumHeads; h++ {
@@ -82,41 +87,47 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 		copy(valCacheRow, s.V)
 
 		// multithread attention. iterate over all heads
-		// C code had pragma here
+		// C code had pragma here, using goroutines
+		wg.Add(config.NumHeads)
 		for h := 0; h < config.NumHeads; h++ {
-			// get the query vector for this head
-			q := s.Q[(h * headSize):((h + 1) * headSize)]
-			// attention scores for this head
-			att := s.Att[(h * config.SeqLen):((h + 1) * config.SeqLen)]
-			// iterate over all timesteps, including the current one
-			for t := 0; t <= pos; t++ {
-				// get the key vector for this head and at this timestamp
-				k := s.KeyCache[(loff + t*dim + h*headSize):(loff + (t+1)*dim + h*headSize)]
-				// calculate the attention score as the dot product of q and k
-				var score float32
-				for i := 0; i < headSize; i++ {
-					score += q[i] * k[i]
-				}
-				score /= float32(math.Sqrt(float64(headSize)))
-				// save the score to the attention buffer
-				att[t] = score
-			}
+			go func(h int) {
+				defer wg.Done()
 
-			// softmax the scores to get attention weights, from 0..pos inclusively
-			nn.SoftMax(att[:pos+1])
-
-			// weighted sum of the values, store back into xb
-			// llama2.c uses memset. resetting to zero in loop is ok since it is next iterated over same slice anyways.
-			for i := 0; i < headSize; i++ {
-				s.XB[(h*headSize + i)] = 0
-			}
-			for t := 0; t <= pos; t++ {
-				a := att[t]
-				for i := 0; i < headSize; i++ {
-					s.XB[((h * headSize) + i)] += a * s.ValCache[loff+t*dim+h*headSize+i]
+				// get the query vector for this head
+				q := s.Q[(h * headSize):((h + 1) * headSize)]
+				// attention scores for this head
+				att := s.Att[(h * config.SeqLen):((h + 1) * config.SeqLen)]
+				// iterate over all timesteps, including the current one
+				for t := 0; t <= pos; t++ {
+					// get the key vector for this head and at this timestamp
+					k := s.KeyCache[(loff + t*dim + h*headSize):(loff + (t+1)*dim + h*headSize)]
+					// calculate the attention score as the dot product of q and k
+					var score float32
+					for i := 0; i < headSize; i++ {
+						score += q[i] * k[i]
+					}
+					score /= float32(math.Sqrt(float64(headSize)))
+					// save the score to the attention buffer
+					att[t] = score
 				}
-			}
+
+				// softmax the scores to get attention weights, from 0..pos inclusively
+				nn.SoftMax(att[:pos+1])
+
+				// weighted sum of the values, store back into xb
+				// llama2.c uses memset. resetting to zero in loop is ok since it is next iterated over same slice anyways.
+				for i := 0; i < headSize; i++ {
+					s.XB[(h*headSize + i)] = 0
+				}
+				for t := 0; t <= pos; t++ {
+					a := att[t]
+					for i := 0; i < headSize; i++ {
+						s.XB[((h * headSize) + i)] += a * s.ValCache[loff+t*dim+h*headSize+i]
+					}
+				}
+			}(h)
 		}
+		wg.Wait()
 
 		// final matmul to get the output of the attention
 		nn.MatMul(s.XB2, s.XB, w.WO[l*dim*dim:(l+1)*dim*dim])
@@ -129,8 +140,10 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 
 		// Now for FFN in PyTorch we have: self.w2(F.silu(self.w1(x)) * self.w3(x))
 		// first calculate self.w1(x) and self.w3(x)
-		nn.MatMul(s.HB, s.XB, w.W1[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
-		nn.MatMul(s.HB2, s.XB, w.W3[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
+		wg.Add(2)
+		go func() { nn.MatMul(s.HB, s.XB, w.W1[l*dim*hiddenDim:(l+1)*dim*hiddenDim]); wg.Done() }()
+		go func() { nn.MatMul(s.HB2, s.XB, w.W3[l*dim*hiddenDim:(l+1)*dim*hiddenDim]); wg.Done() }()
+		wg.Wait()
 
 		// F.silu; silu(x)=x*σ, where σ(x) is the logistic sigmoid
 		for i := 0; i < hiddenDim; i++ {

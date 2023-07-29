@@ -40,16 +40,16 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 
 ### Performance
 
-| model           | llama2.c         | llama2.go
-| --------------- | ---------------- | ----------------
-| stories42M.bin  |  32.759507 tok/s | 19.951497  tok/s
-| stories110M.bin |  11.304695 tok/s |  7.146943  tok/s
+| model           | llama2.c          | llama2.go
+| --------------- | ----------------- | ----------------
+| stories42M.bin  |  265.348595 tok/s | 25.677383  tok/s
+| stories110M.bin |  101.837061 tok/s | 10.474615  tok/s
 
 ### Related Work
 
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs
-* https://github.com/gotzmann/llama.go
+* https://github.com/saracen/llama2.go (there: `mmap`; no 3rd party; go routines; single file; prompt; profiling)
 * https://github.com/tmc/go-llama2 (there: fork; slices, no 3rd party; single file)
 * https://github.com/haormj/llama2.go (there: slices; 3rd party; cobra; makefile; single file)
-* https://github.com/saracen/llama2.go (there: `mmap`; no 3rd party; go routines; single file)
+* https://github.com/gotzmann/llama.go
