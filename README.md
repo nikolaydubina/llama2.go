@@ -50,6 +50,7 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 * transformer steps parallelism
 * (experimental) loop unrolling
 * (experimental) in-matrix parallelism
+* (todo) SIMD
 
 | model           | llama2.c          | llama2.go
 | --------------- | ----------------- | ----------------
