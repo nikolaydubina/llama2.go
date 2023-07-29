@@ -11,19 +11,27 @@ It is pure Go inference code ported from experimental implementation by [Andrej 
 ### How to run?
 
 1. get `tokenizer.bin` from [llama2.c](https://github.com/karpathy/llama2.c) (included)
-2. get weights from from [llama2.c](https://github.com/karpathy/llama2.c). `wget https://karpathy.ai/llama2c/model44m.bin -P out44m`
+2. get weights `wget https://huggingface.co/karpathy/tinyllamas/resolve/main/stories110M.bin`
 3. `go install github.com/nikolaydubina/llama2.go@latest`
-4. `llama2.go -checkpoint out44m/model44m.bin`
-
-Example output:
+4. `llama2.go -checkpoint=stories110M.bin -prompt="good morning said sun to trees"`
 
 ```
-$ llama2.go -temperature=0.9 -checkpoint=out44m/model44m.bin
-2023/07/28 00:50:48 config: llama2.Config{Dim:512, HiddenDim:1376, NumLayers:8, NumHeads:8, NumKVHeads:8, VocabSize:32000, SeqLen:1024}
- Once upon a time, there was a boy named Timmy who loved playing with his toy cars. One day, Timmy's friend Billy came over to play. Timmy showed Billy his favorite car, which was a red one with big black wheels. Billy said, "Wow, that car is cool! Can I play with it too?" Timmy thought about it and said, "Sure, but be careful not to shoot it too hard or it might break."
-Billy drove the car around the room, making car noises. Suddenly, the car hit a rope that was hanging from the ceiling. Timmy said, "Oh no, now we have to fix it!" Billy said, "I'm sorry, I didn't mean to. Let's ask your dad to help us." Timmy's dad came in and fixed the problem. He said, "Wow, that was impressive! You two are amazing at fixing things." Timmy and Billy smiled and continued playing with the car.
+$ llama2.go -checkpoint=stories110M.bin -prompt="good morning said sun to trees"
+2023/07/29 09:30:22 config: llama2.Config{Dim:768, HiddenDim:2048, NumLayers:12, NumHeads:12, NumKVHeads:12, VocabSize:32000, SeqLen:1024}
 <s>
- Once upon a time, there was a little boy named Timmy. Timmy loved to play outside in the yard. One day, he found a big bowl and
+good morning said sun to trees: "Let's organize an operation!"
+The trees clapped their branches and asked "What will we do?"
+Badger smiled and replied "We will build a treehouse together!"
+The trees got blocks of wood and started to build. Badger put nails in the tiny pieces of wood, while the trees put the blocks together to make a
+ solid base. 
+When they finished their treehouse, Goodger and the trees sat inside. Badger said, "Look how fancy we made it!"
+The trees smiled and nodded. They said, "It's very fancy! Thank you for helping us organize this operation." 
+Then they lived happily in their fancy treehouse together!
+<s>
+Once upon a time, there was a boy named Timmy. Timmy was very hungry and wanted to eat his meal. He asked his mom, "What are we having for dinner
+?" His mom said, "We are having chicken and rice." Timmy said, "Yum! I love chicken and rice."
+While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to watch a movie after
+2023/07/29 09:30:58 achieved tok/s: 28.619646
 ````
 
 ### Differences from `llama2.c`
@@ -32,7 +40,14 @@ Billy drove the car around the room, making car noises. Suddenly, the car hit a 
 
 ### Performance
 
+| model           | llama2.c         | llama2.go
+| --------------- | ---------------- | ----------------
+| stories42M.bin  |  32.759507 tok/s | 19.951497  tok/s
+| stories110M.bin |  11.304695 tok/s |  7.146943  tok/s
+
 ```
+42M
+
 llama.c
 achieved tok/s: 125.860374
 

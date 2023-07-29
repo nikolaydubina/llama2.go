@@ -2,6 +2,8 @@ package llama2
 
 import (
 	"math"
+
+	"github.com/nikolaydubina/llama2.go/nn"
 )
 
 type TransformerWeights struct {
@@ -47,12 +49,12 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 	// forward all layers
 	for l := 0; l < config.NumLayers; l++ {
 		// attention RMSNorm
-		RMSNorm(s.XB, x, w.RMSAttentionWeight[l*dim:((l+1)*dim)])
+		nn.RMSNorm(s.XB, x, w.RMSAttentionWeight[l*dim:((l+1)*dim)])
 
 		// qkv matmuls for this position
-		MatMul(s.Q, s.XB, w.WQ[l*dim*dim:(l+1)*dim*dim])
-		MatMul(s.K, s.XB, w.WK[l*dim*dim:(l+1)*dim*dim])
-		MatMul(s.V, s.XB, w.WV[l*dim*dim:(l+1)*dim*dim])
+		nn.MatMul(s.Q, s.XB, w.WQ[l*dim*dim:(l+1)*dim*dim])
+		nn.MatMul(s.K, s.XB, w.WK[l*dim*dim:(l+1)*dim*dim])
+		nn.MatMul(s.V, s.XB, w.WV[l*dim*dim:(l+1)*dim*dim])
 
 		// apply RoPE rotation to the q and k vectors for each head
 		for h := 0; h < config.NumHeads; h++ {
@@ -101,7 +103,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 			}
 
 			// softmax the scores to get attention weights, from 0..pos inclusively
-			SoftMax(att[:pos+1])
+			nn.SoftMax(att[:pos+1])
 
 			// weighted sum of the values, store back into xb
 			// llama2.c uses memset. resetting to zero in loop is ok since it is next iterated over same slice anyways.
@@ -117,18 +119,18 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 		}
 
 		// final matmul to get the output of the attention
-		MatMul(s.XB2, s.XB, w.WO[l*dim*dim:(l+1)*dim*dim])
+		nn.MatMul(s.XB2, s.XB, w.WO[l*dim*dim:(l+1)*dim*dim])
 
 		// residual connection back into x
-		Acc(x, s.XB2)
+		nn.Acc(x, s.XB2)
 
 		// FFN RMSNorm
-		RMSNorm(s.XB, x, w.RMSFFNWeight[l*dim:(l+1)*dim])
+		nn.RMSNorm(s.XB, x, w.RMSFFNWeight[l*dim:(l+1)*dim])
 
 		// Now for FFN in PyTorch we have: self.w2(F.silu(self.w1(x)) * self.w3(x))
 		// first calculate self.w1(x) and self.w3(x)
-		MatMul(s.HB, s.XB, w.W1[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
-		MatMul(s.HB2, s.XB, w.W3[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
+		nn.MatMul(s.HB, s.XB, w.W1[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
+		nn.MatMul(s.HB2, s.XB, w.W3[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
 
 		// F.silu; silu(x)=x*σ, where σ(x) is the logistic sigmoid
 		for i := 0; i < hiddenDim; i++ {
@@ -141,15 +143,15 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 		}
 
 		// final matmul to get the output of the FFN
-		MatMul(s.XB, s.HB, w.W2[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
+		nn.MatMul(s.XB, s.HB, w.W2[l*dim*hiddenDim:(l+1)*dim*hiddenDim])
 
 		// residual connection
-		Acc(x, s.XB)
+		nn.Acc(x, s.XB)
 	}
 
 	// final RMSNorm
-	RMSNorm(x, x, w.RMSFinalWeight)
+	nn.RMSNorm(x, x, w.RMSFinalWeight)
 
 	// classifier into logits
-	MatMul(s.Logits, x, w.WCLS)
+	nn.MatMul(s.Logits, x, w.WCLS)
 }
