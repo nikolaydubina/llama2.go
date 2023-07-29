@@ -45,16 +45,6 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 | stories42M.bin  |  32.759507 tok/s | 19.951497  tok/s
 | stories110M.bin |  11.304695 tok/s |  7.146943  tok/s
 
-```
-42M
-
-llama.c
-achieved tok/s: 125.860374
-
-llama.go
-achieved tok/s: 80.302906
-```
-
 ### Related Work
 
 * https://github.com/karpathy/llama2.c
