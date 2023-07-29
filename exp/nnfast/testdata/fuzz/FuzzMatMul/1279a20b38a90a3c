@@ -1,0 +1,4 @@
+go test fuzz v1
+uint(3)
+uint(8)
+uint(171)

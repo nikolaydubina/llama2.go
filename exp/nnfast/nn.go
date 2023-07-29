@@ -50,6 +50,7 @@ func SoftMax[T float32 | float64](x []T) {
 	}
 }
 
+// MatMulUnroll in to multiple inlined operations
 func MatMulUnroll[T float32 | float64](xout, x, w []T) {
 	for i := range xout {
 		var sum T
@@ -67,8 +68,8 @@ func MatMulUnroll[T float32 | float64](xout, x, w []T) {
 	}
 }
 
-// MatMul chunks horizontally across cache lines and parallelizes
-func MatMul[T float32 | float64](xout, x, w []T) {
+// MatMulParallel chunks horizontally across cache lines and parallelizes
+func MatMulParallel[T float32 | float64](xout, x, w []T) {
 	n, m := len(xout), len(x)
 	if n < NumThreads {
 		MatMulUnroll(xout, x, w)
@@ -86,6 +87,9 @@ func MatMul[T float32 | float64](xout, x, w []T) {
 	}
 	wg.Wait()
 }
+
+// MatMul uses multiple optimizations
+func MatMul[T float32 | float64](xout, x, w []T) { MatMulParallel(xout, x, w) }
 
 // Sample index from probabilities, they must sum to 1
 func Sample[T float32 | float64](probabilities []T) int {

@@ -4,7 +4,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/nikolaydubina/llama2.go/nn"
+	nn "github.com/nikolaydubina/llama2.go/exp/nnfast"
 )
 
 type TransformerWeights struct {

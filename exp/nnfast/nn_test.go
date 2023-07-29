@@ -2,16 +2,18 @@ package nnfast_test
 
 import (
 	"fmt"
+	"math/rand"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	nn "github.com/nikolaydubina/llama2.go/exp/nnfast"
+	"github.com/nikolaydubina/llama2.go/exp/nnfast"
+	"github.com/nikolaydubina/llama2.go/nn"
 )
 
 func TestAcc(t *testing.T) {
 	a := []float32{1, 2, 3, 0, -1}
 	b := []float32{4, 5, 6, 0, 1}
-	nn.Acc(a, b)
+	nnfast.Acc(a, b)
 	if a[0] != 5 || a[1] != 7 || a[2] != 9 || a[3] != 0 || a[4] != 0 {
 		t.Errorf("Acc failed")
 	}
@@ -37,7 +39,7 @@ func TestSoftMax(t *testing.T) {
 	}
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("%d: %#v", i, tc), func(t *testing.T) {
-			nn.SoftMax(tc.x)
+			nnfast.SoftMax(tc.x)
 			if diff := cmp.Diff(tc.exp, tc.x); diff != "" {
 				t.Errorf("%s", diff)
 			}
@@ -69,7 +71,7 @@ func TestArgMax(t *testing.T) {
 	}
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("%d: %#v", i, tc), func(t *testing.T) {
-			if got := nn.ArgMax(tc.x); got != tc.exp {
+			if got := nnfast.ArgMax(tc.x); got != tc.exp {
 				t.Errorf("got %d, exp %d", got, tc.exp)
 			}
 		})
@@ -117,11 +119,42 @@ func TestMatMul(t *testing.T) {
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			got := make([]float32, len(tc.exp))
-			nn.NumThreads = tc.numThreads
-			nn.MatMul(got, tc.x, tc.w)
+			nnfast.NumThreads = tc.numThreads
+			nnfast.MatMul(got, tc.x, tc.w)
 			if diff := cmp.Diff(tc.exp, got); diff != "" {
 				t.Errorf("%s", diff)
 			}
 		})
 	}
+}
+
+func fillRand(x []float32, rnd *rand.Rand) {
+	for i := range x {
+		x[i] = rnd.Float32()
+	}
+}
+
+func FuzzMatMul(f *testing.F) {
+	f.Fuzz(func(t *testing.T, n, m, seed uint) {
+		if n == 0 || m == 0 || n*m > 10000 {
+			t.Skip()
+		}
+
+		x := make([]float32, n)
+		w := make([]float32, n*m)
+
+		rnd := rand.New(rand.NewSource(int64(seed)))
+		fillRand(x, rnd)
+		fillRand(w, rnd)
+
+		o := make([]float32, m)
+		nnfast.MatMul(o, x, w)
+
+		o1 := make([]float32, m)
+		nn.MatMul(o1, x, w)
+
+		if diff := cmp.Diff(o1, o); diff != "" {
+			t.Errorf("x(%v) w(%v) o(%v) o_exp(%v): %s", x, w, o, o1, diff)
+		}
+	})
 }
