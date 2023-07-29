@@ -45,6 +45,30 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 | stories42M.bin  |  265.348595 tok/s | 25.677383  tok/s
 | stories110M.bin |  101.837061 tok/s | 10.474615  tok/s
 
+### Optimizations
+
+* transformer steps parallelism
+* (experimental) loop unrolling
+* (experimental) in-matrix parallelism
+
+| model           | llama2.c          | llama2.go
+| --------------- | ----------------- | ----------------
+| stories42M.bin  |  265.348595 tok/s | 82.793488  tok/s
+| stories110M.bin |  101.837061 tok/s | 39.280158  tok/s
+
+To enable experimental optimizations update `llama2/transformer.go` import to use package with optimizations and rebuild.
+
+```go
+package llama2
+
+import (
+	"math"
+	"sync"
+
+	nn "github.com/nikolaydubina/llama2.go/exp/nnfast"
+)
+```
+
 ### Related Work
 
 * https://github.com/karpathy/llama2.c
