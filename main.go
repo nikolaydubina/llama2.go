@@ -20,7 +20,7 @@ func main() {
 	)
 
 	flag.StringVar(&checkpointFilePath, "checkpoint", "out/model.bin", "checkpoint binary file with weights")
-	flag.StringVar(&tokenizerFilePath, "tokenizer", "tokenizer.bin", "tokenizer binary file with vocabulary (get this from llama2.c repo)")
+	flag.StringVar(&tokenizerFilePath, "tokenizer", "tokenizer.bin", "tokenizer binary file with vocabulary (get this from repo)")
 	flag.Float64Var(&temperature, "temperature", 0.9, "temperature is optional, 0 = (deterministic) argmax sampling, 1 = baseline")
 	flag.IntVar(&steps, "steps", 256, "max number of steps to run for, 0: use seq_len")
 	flag.StringVar(&prompt, "prompt", "", "query to start with")

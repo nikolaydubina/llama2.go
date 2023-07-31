@@ -24,4 +24,5 @@ go.work
 stories110M.bin
 stories42M.bin
 
-m
+*.bin
+!tokenizer.bin

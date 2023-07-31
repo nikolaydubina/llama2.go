@@ -4,13 +4,12 @@
 [![codecov](https://codecov.io/gh/nikolaydubina/llama2.go/branch/master/graph/badge.svg?token=OMf0git2BD)](https://codecov.io/gh/nikolaydubina/llama2.go)
 [![Go Reference](https://pkg.go.dev/badge/github.com/nikolaydubina/llama2.go.svg)](https://pkg.go.dev/github.com/nikolaydubina/llama2.go)
 
-Native Go version of [llama2.c](https://github.com/karpathy/llama2.c).
-
-It is pure Go inference code ported from experimental implementation by [Andrej Karpathy](https://en.wikipedia.org/wiki/Andrej_Karpathy) of latest as of `2023-07-25` LLM model from Meta [LLAMA-2](https://ai.meta.com/llama/).  
+This is a native Go inference of [LLaMA-2](https://ai.meta.com/llama/), as of `2023-08-01` latest and state-of-the-art open source large-language-model from Meta. 
+It was originally ported from [github.com/karpathy/llama2.c](https://github.com/karpathy/llama2.c) and is kept in sync with it. Additional features may be added.
 
 ### How to run?
 
-1. get `tokenizer.bin` from [llama2.c](https://github.com/karpathy/llama2.c) (included)
+1. get `tokenizer.bin` from [llama2.c](https://github.com/karpathy/llama2.c)
 2. get weights `wget https://huggingface.co/karpathy/tinyllamas/resolve/main/stories110M.bin`
 3. `go install github.com/nikolaydubina/llama2.go@latest`
 4. `llama2.go -checkpoint=stories110M.bin -prompt="good morning said sun to trees"`
@@ -40,10 +39,12 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 
 ### Performance
 
-| model           | llama2.c          | llama2.go (simple) | llama2.go (fast)   |
-| --------------- | ----------------- | ------------------ | ------------------ |
-| stories42M.bin  |  265.348595 tok/s | 25.677383  tok/s   | 82.793488  tok/s   |
-| stories110M.bin |  101.837061 tok/s | 10.474615  tok/s   | 39.280158  tok/s   |  
+| system                  | model           | llama2.c      | llama2.go (simple) | llama2.go (fast)   |
+| ------------------------| --------------- | ------------- | ------------------ | ------------------ |
+| Apple M1 Max 10CPU 64GB | stories42M      |  265.35 tok/s |        25.68 tok/s |        82.79 tok/s |
+| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |        10.47 tok/s |        39.28 tok/s |  
+| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |                    |         0.87 tok/s |
+| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |                    |         0.38 tok/s |
 
 ### Optimizations
 
@@ -52,25 +53,14 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 * in-matrix parallelism
 * (todo) SIMD
 
-Optimizations are `Fuzz`-tested against basic correct algorithm.
-To disable optimizations update `llama2/transformer.go` import to use package without optimizations and rebuild.
-
-```go
-package llama2
-
-import (
-	"math"
-	"sync"
-
-	"github.com/nikolaydubina/llama2.go/nn"
-)
-```
+All optimizations are `Fuzz`-tested against basic algorithm, which is itself tested.
+To disable optimizations update `llama2/transformer.go` import to package without optimizations and rebuild.
 
 ### Related Work
 
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs
-* https://github.com/saracen/llama2.go (`mmap`) — another very good llama2.go port
+* https://github.com/saracen/llama2.go (`mmap`, `cgo`) — another very good llama2.go port
 * https://github.com/tmc/go-llama2 (fork)
 * https://github.com/haormj/llama2.go (cobra)
 * https://github.com/gotzmann/llama.go
