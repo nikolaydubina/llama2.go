@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/nikolaydubina/llama2.go/branch/master/graph/badge.svg?token=OMf0git2BD)](https://codecov.io/gh/nikolaydubina/llama2.go)
 [![Go Reference](https://pkg.go.dev/badge/github.com/nikolaydubina/llama2.go.svg)](https://pkg.go.dev/github.com/nikolaydubina/llama2.go)
 
-This is a native Go inference of [LLaMA-2](https://ai.meta.com/llama/), as of `2023-08-01` latest and state-of-the-art open source large-language-model from Meta. 
+This is a native Go inference of [LLaMA-2](https://ai.meta.com/llama/), as of `2023-08-01` state-of-the-art open source large-language-model from Meta. 
 It was originally ported from [github.com/karpathy/llama2.c](https://github.com/karpathy/llama2.c) and is kept in sync with it. Additional features may be added.
 
 ### How to run?
