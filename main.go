@@ -57,8 +57,8 @@ func main() {
 	w := llama2.NewTransformerWeightsFromCheckpoint(config, checkpointFile, isSharedWeights)
 
 	// right now we cannot run for more than config.SeqLen steps
-	if steps <= 0 || steps >= config.SeqLen {
-		steps = config.SeqLen - 1
+	if steps <= 0 || steps > config.SeqLen {
+		steps = config.SeqLen
 	}
 
 	runState := llama2.NewRunState(config)
