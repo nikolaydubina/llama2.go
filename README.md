@@ -39,12 +39,12 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 
 ### Performance
 
-| system                  | model           | llama2.c      | llama2.go (simple) | llama2.go (fast)   |
-| ------------------------| --------------- | ------------: | -----------------: | -----------------: |
-| Apple M1 Max 10CPU 64GB | stories42M      |  265.35 tok/s |        25.68 tok/s |        82.79 tok/s |
-| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |        10.47 tok/s |        39.28 tok/s |  
-| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |                    |         0.87 tok/s |
-| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |                    |         0.38 tok/s |
+| system                  | model           | [llama2.c](http://github.com/karpathy/llama2.c) | [llama.cpp](https://github.com/ggerganov/llama.cpp) | llama2.go (simple) | llama2.go (fast)   |
+| ------------------------| --------------- | ------------: | -----------------: | -----------------: | -----------------: |
+| Apple M1 Max 10CPU 64GB | stories42M      |  265.35 tok/s |                    |        25.68 tok/s |        82.79 tok/s |
+| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |                    |        10.47 tok/s |        39.28 tok/s |  
+| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |        20.36 tok/s |                    |         0.87 tok/s | 
+| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |        11.71 tok/s |                    |         0.38 tok/s |
 
 ### Optimizations
 
@@ -59,8 +59,10 @@ To disable optimizations update `llama2/transformer.go` import to package withou
 ### Related Work
 
 * https://github.com/karpathy/llama2.c
-* https://github.com/poudels14/llama2_rs
-* https://github.com/saracen/llama2.go (`mmap`, `cgo`) — another very good llama2.go port
-* https://github.com/tmc/go-llama2 (fork)
-* https://github.com/haormj/llama2.go (cobra)
-* https://github.com/gotzmann/llama.go
+* https://github.com/poudels14/llama2_rs (`llama2.c` Rust port)
+* https://github.com/saracen/llama2.go (`llama2.c` Go port, `mmap`, `cgo`)
+* https://github.com/tmc/go-llama2 (`llama2.c` Go fork)
+* https://github.com/haormj/llama2.go (`llama2.c` Go port, `cobra`)
+* https://github.com/gotzmann/llama.go (`llama.cpp` port in Go)
+* https://github.com/go-skynet/go-llama.cpp (`cgo` bidning `llama.cpp`)
+* https://github.com/go-skynet/LocalAI (`cgo` binding API of many models)
