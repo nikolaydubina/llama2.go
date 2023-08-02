@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/nikolaydubina/llama2.go/llama2"
@@ -52,7 +54,7 @@ func main() {
 	}
 	defer tokenizerFile.Close()
 
-	vocab := llama2.NewVocabFromFile(config.VocabSize, tokenizerFile)
+	tokenizer := llama2.NewTokenizerFromFile(config.VocabSize, tokenizerFile)
 
 	w := llama2.NewTransformerWeightsFromCheckpoint(config, checkpointFile, isSharedWeights)
 
@@ -63,7 +65,7 @@ func main() {
 
 	runState := llama2.NewRunState(config)
 
-	promptTokens := vocab.Encode(prompt)
+	promptTokens := tokenizer.Encode(prompt)
 
 	// the current position we are in
 	timeStart := time.Now()
@@ -95,10 +97,10 @@ func main() {
 
 		// following BOS token (1), sentencepiece decoder strips any leading whitespace
 		var tokenStr string
-		if token == 1 && vocab.Words[next][0] == ' ' {
-			tokenStr = vocab.Words[next][1:]
+		if token == 1 && tokenizer.Words[next][0] == ' ' {
+			tokenStr = tokenizer.Words[next][1:]
 		} else {
-			tokenStr = vocab.Words[next]
+			tokenStr = tokenizer.Words[next]
 		}
 		out.WriteString(tokenStr)
 
@@ -108,4 +110,112 @@ func main() {
 	out.Write([]byte("\n"))
 
 	log.Printf("achieved tok/s: %f\n", float64(steps)/time.Since(timeStart).Seconds())
+}
+
+const (
+	B_INST = "[INST]"
+	E_INST = "[/INST]"
+	B_SYS  = "<<SYS>>\n"
+	E_SYS  = "\n<</SYS>>\n\n"
+)
+
+// go:embed dialog_default_system_prompt.txt
+var DefaultSystemPrompt string
+
+type Role uint
+
+const (
+	System Role = iota + 1
+	User
+	Assistant
+)
+
+func (s Role) String() string {
+	switch s {
+	case System:
+		return "system"
+	case User:
+		return "user"
+	case Assistant:
+		return "assistant"
+	default:
+		return ""
+	}
+}
+
+type Message struct {
+	Role    Role
+	Content string
+}
+
+type Dialog []Message
+
+func RunDialog(
+	config llama2.Config,
+	dialogs []Dialog,
+	maxGenLen int,
+) (response Dialog, error) {
+	if maxGenLen == 0 {
+		maxGenLen = config.SeqLen - 1
+	}
+
+	var promptTokens []int
+
+	// creating basic dialog
+	for _, dialog := range dialogs {
+		if dialog[0].Role != System {
+			dialog = append(Dialog{{Role: System, Content: DefaultSystemPrompt}}, dialog...)
+		}
+		dialog = append(Dialog{{Role: dialog[1].Role, Content: B_SYS + dialog[0].Content + E_SYS + dialog[1].Content}}, dialog[2:]...)
+
+		// dialog roles check
+		for i, m := range dialog {
+			var expRole Role = System
+			if i%2 == 0 {
+				expRole = User
+			}
+			if m.Role != expRole {
+				return fmt.Errorf("expected roles User/System/User/..., at i(%d) expected(%s) but got role(%s)", i, expRole, m.Role)
+			}
+		}
+
+		if lastRole := dialog[len(dialog)-1].Role; lastRole != User {
+			return fmt.Errorf("last prompt should be from role(%s) but got role(%s)", User, lastRole)
+		}
+
+		// collect dialog tokens
+		var dialogTokens []int
+		for i := 0; i < len(dialog); i += 2 {
+			prompt := dialog[i]
+			answer := dialog[i+1]
+
+			var message strings.Builder
+			message.WriteString(B_INST)
+			message.WriteRune(' ')
+			message.WriteString(strings.TrimSpace(prompt.Content))
+			message.WriteRune(' ')
+			message.WriteString(E_INST)
+			message.WriteString(strings.TrimSpace(answer.Content))
+
+			dialogTokens = append(dialogTokens, tokenizer.Encode2(message.String(), true /* bos */, true /* eos */)...)
+		}
+
+		var message strings.Builder
+		message.WriteString(B_INST)
+		message.WriteRune(' ')
+		message.WriteString(strings.TrimSpace(dialog[len(dialog)-1].Content))
+		message.WriteRune(' ')
+		message.WriteString(E_INST)
+		dialogTokens = append(dialogTokens, tokenizer.Encode2(message.String(), true /* bos */, false /* eos */)...)
+
+		promptTokens = append(promptTokens, dialogTokens...)
+	}
+
+	generationTokens := generate()
+
+	for _, t := range generationTokens {
+		response = append(response, Message{Role: Assistant, Content: tokenizer.Decode(t)})
+	} 
+
+	return response, nil
 }

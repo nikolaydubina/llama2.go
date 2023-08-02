@@ -6,14 +6,14 @@ import (
 	"log"
 )
 
-type Vocab struct {
+type Tokenizer struct {
 	Words       []string
 	Scores      []float32
 	MaxTokenLen int // unused in Go version
 }
 
-func NewVocabFromFile(vocabSize int, r io.Reader) Vocab {
-	vocab := Vocab{
+func NewTokenizerFromFile(vocabSize int, r io.Reader) Tokenizer {
+	vocab := Tokenizer{
 		Words:  make([]string, 0, vocabSize),
 		Scores: make([]float32, 0, vocabSize),
 	}
@@ -38,7 +38,7 @@ func NewVocabFromFile(vocabSize int, r io.Reader) Vocab {
 	return vocab
 }
 
-func (v Vocab) EncodeWord(s string) int {
+func (v Tokenizer) EncodeWord(s string) int {
 	for i, word := range v.Words {
 		if word == s {
 			return i
@@ -47,7 +47,7 @@ func (v Vocab) EncodeWord(s string) int {
 	return -1
 }
 
-func (v Vocab) Encode(s string) (tokens []int) {
+func (v Tokenizer) Encode(s string) (tokens []int) {
 	// first encode every individual byte in the input string
 	for i := 0; i < len(s); i++ {
 		id := v.EncodeWord(string(s[i : i+1]))
