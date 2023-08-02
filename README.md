@@ -52,6 +52,7 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 * loop unrolling
 * in-matrix parallelism
 * (todo) SIMD
+* (todo) quantization
 
 All optimizations are `Fuzz`-tested against basic algorithm, which is itself tested.
 To disable optimizations update `llama2/transformer.go` import to package without optimizations and rebuild.
