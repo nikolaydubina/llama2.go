@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
+	_ "embed"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -19,6 +22,7 @@ func main() {
 		temperature        float64
 		steps              int
 		prompt             string
+		isDialog           bool
 	)
 
 	flag.StringVar(&checkpointFilePath, "checkpoint", "out/model.bin", "checkpoint binary file with weights")
@@ -26,7 +30,12 @@ func main() {
 	flag.Float64Var(&temperature, "temperature", 0.9, "temperature is optional, 0 = (deterministic) argmax sampling, 1 = baseline")
 	flag.IntVar(&steps, "steps", 256, "max number of steps to run for, 0: use seq_len")
 	flag.StringVar(&prompt, "prompt", "", "query to start with")
+	flag.BoolVar(&isDialog, "dialog", false, "run interactive dialog mode")
 	flag.Parse()
+
+	if isDialog && prompt != "" {
+		log.Fatal("cannot use -dialog and -prompt together")
+	}
 
 	checkpointFile, err := os.OpenFile(checkpointFilePath, os.O_RDONLY, 0)
 	if err != nil {
@@ -65,24 +74,40 @@ func main() {
 
 	runState := llama2.NewRunState(config)
 
-	promptTokens := tokenizer.Encode(prompt)
+	defer func(start time.Time) { log.Printf("achieved tok/s: %f\n", float64(steps)/time.Since(start).Seconds()) }(time.Now())
 
-	// the current position we are in
-	timeStart := time.Now()
-	var token int = 1          // 1 = BOS token in llama-2 sentencepiece
-	out.Write([]byte("<s>\n")) // explicit print initial BOS token for stylistic symmetry reasons
-	for pos := 0; pos < steps; pos++ {
+	if !isDialog {
+		var promptTokens []int
+		promptTokens = append(promptTokens, tokenizer.BOS_ID)
+		promptTokens = append(promptTokens, tokenizer.Encode(prompt)...)
+		generate(config, runState, w, tokenizer.Decoder(out), temperature, promptTokens, steps)
+	} else {
+		RunDialog(config, tokenizer, runState, w, nil, out, steps, temperature)
+	}
+}
+
+// generate forwards model through prompt and generates up to maxGenLen tokens after it
+func generate(
+	config llama2.Config,
+	runState llama2.RunState,
+	w llama2.TransformerWeights,
+	tokenizerDecoder *llama2.TokenDecoder,
+	temperature float64,
+	promptTokens []int,
+	maxGenLen int,
+) {
+	for token, pos := promptTokens[0], 0; pos < maxGenLen; pos++ {
 		// forward the transformer to get logits for the next token
 		llama2.Transformer(token, pos, config, runState, w)
 
-		var next int
+		// different strategies to pick next token from probabilities or current prompt
 		if pos < len(promptTokens) {
-			next = promptTokens[pos]
+			token = promptTokens[pos]
 		} else {
 			// sample the next token
 			if temperature == 0 {
 				// greedy argmax sampling
-				next = nn.ArgMax(runState.Logits)
+				token = nn.ArgMax(runState.Logits)
 			} else {
 				// apply the temperature to the logits
 				for q := 0; q < config.VocabSize; q++ {
@@ -91,131 +116,97 @@ func main() {
 				// apply softmax to the logits to the probabilities for next token
 				nn.SoftMax(runState.Logits)
 				// we now want to sample from this distribution to get the next token
-				next = nn.Sample(runState.Logits)
+				token = nn.Sample(runState.Logits)
 			}
 		}
 
-		// following BOS token (1), sentencepiece decoder strips any leading whitespace
-		var tokenStr string
-		if token == 1 && tokenizer.Words[next][0] == ' ' {
-			tokenStr = tokenizer.Words[next][1:]
-		} else {
-			tokenStr = tokenizer.Words[next]
-		}
-		out.WriteString(tokenStr)
-
-		// advance forward
-		token = next
+		tokenizerDecoder.WriteToken(token)
 	}
-	out.Write([]byte("\n"))
-
-	log.Printf("achieved tok/s: %f\n", float64(steps)/time.Since(timeStart).Seconds())
 }
 
 const (
 	B_INST = "[INST]"
 	E_INST = "[/INST]"
-	B_SYS  = "<<SYS>>\n"
-	E_SYS  = "\n<</SYS>>\n\n"
+	B_SYS  = "<<SYS>>"
+	E_SYS  = "<</SYS>>"
 )
 
-// go:embed dialog_default_system_prompt.txt
-var DefaultSystemPrompt string
+//go:embed dialog_system_prompt_default.txt
+var DialogSystemPromptDefault string
 
-type Role uint
+//go:embed dialog_system_prompt_short.txt
+var DialogSystemPromptShort string
+
+// Role tells whose message it is in dialog. LLaMA2 has also Assistant, that is not used here.
+type Role string
 
 const (
-	System Role = iota + 1
-	User
-	Assistant
+	System Role = "system"
+	User   Role = "user"
 )
-
-func (s Role) String() string {
-	switch s {
-	case System:
-		return "system"
-	case User:
-		return "user"
-	case Assistant:
-		return "assistant"
-	default:
-		return ""
-	}
-}
 
 type Message struct {
 	Role    Role
 	Content string
 }
 
-type Dialog []Message
+func (m Message) String() string { return fmt.Sprintf("%s: %s", m.Role, m.Content) }
 
+// RunDialog transforms dialog messages into prompts for model to predict, boots dialog with standard messages.
 func RunDialog(
 	config llama2.Config,
-	dialogs []Dialog,
+	tokenizer llama2.Tokenizer,
+	runState llama2.RunState,
+	w llama2.TransformerWeights,
+	dialog []Message,
+	out io.StringWriter,
 	maxGenLen int,
-) (response Dialog, error) {
+	temperature float64,
+) {
 	if maxGenLen == 0 {
 		maxGenLen = config.SeqLen - 1
 	}
 
-	var promptTokens []int
+	// dialog startup
+	if len(dialog) == 0 || dialog[0].Role != System {
+		dialog = append([]Message{{Role: System, Content: DialogSystemPromptShort}}, dialog...)
+	}
+	dialog = append([]Message{{Role: dialog[1].Role, Content: B_SYS + dialog[0].Content + E_SYS + dialog[1].Content}}, dialog[2:]...)
 
-	// creating basic dialog
-	for _, dialog := range dialogs {
-		if dialog[0].Role != System {
-			dialog = append(Dialog{{Role: System, Content: DefaultSystemPrompt}}, dialog...)
+	// dialog roles check
+	for i, m := range dialog {
+		var expRole Role = System
+		if i%2 == 0 {
+			expRole = User
 		}
-		dialog = append(Dialog{{Role: dialog[1].Role, Content: B_SYS + dialog[0].Content + E_SYS + dialog[1].Content}}, dialog[2:]...)
-
-		// dialog roles check
-		for i, m := range dialog {
-			var expRole Role = System
-			if i%2 == 0 {
-				expRole = User
-			}
-			if m.Role != expRole {
-				return fmt.Errorf("expected roles User/System/User/..., at i(%d) expected(%s) but got role(%s)", i, expRole, m.Role)
-			}
+		if m.Role != expRole {
+			panic(fmt.Errorf("expected roles User/System/User/..., at i(%d) expected(%s) but got role(%s)", i, expRole, m.Role))
 		}
-
-		if lastRole := dialog[len(dialog)-1].Role; lastRole != User {
-			return fmt.Errorf("last prompt should be from role(%s) but got role(%s)", User, lastRole)
-		}
-
-		// collect dialog tokens
-		var dialogTokens []int
-		for i := 0; i < len(dialog); i += 2 {
-			prompt := dialog[i]
-			answer := dialog[i+1]
-
-			var message strings.Builder
-			message.WriteString(B_INST)
-			message.WriteRune(' ')
-			message.WriteString(strings.TrimSpace(prompt.Content))
-			message.WriteRune(' ')
-			message.WriteString(E_INST)
-			message.WriteString(strings.TrimSpace(answer.Content))
-
-			dialogTokens = append(dialogTokens, tokenizer.Encode2(message.String(), true /* bos */, true /* eos */)...)
-		}
-
-		var message strings.Builder
-		message.WriteString(B_INST)
-		message.WriteRune(' ')
-		message.WriteString(strings.TrimSpace(dialog[len(dialog)-1].Content))
-		message.WriteRune(' ')
-		message.WriteString(E_INST)
-		dialogTokens = append(dialogTokens, tokenizer.Encode2(message.String(), true /* bos */, false /* eos */)...)
-
-		promptTokens = append(promptTokens, dialogTokens...)
 	}
 
-	generationTokens := generate()
+	if lastRole := dialog[len(dialog)-1].Role; lastRole != User {
+		panic(fmt.Errorf("last prompt should be from role(%s) but got role(%s)", User, lastRole))
+	}
 
-	for _, t := range generationTokens {
-		response = append(response, Message{Role: Assistant, Content: tokenizer.Decode(t)})
-	} 
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		prompt := scanner.Text()
+		dialog := []Message{{Role: User, Content: prompt}}
+	}
 
-	return response, nil
+	// collect dialog tokens
+	var dialogTokens []int
+	for i := 0; i+1 < len(dialog); i += 2 {
+		prompt := dialog[i]
+		answer := dialog[i+1]
+
+		dialogTokens = append(dialogTokens, tokenizer.BOS_ID)
+		dialogTokens = append(dialogTokens, tokenizer.Encode(B_INST+" "+prompt.String()+" "+E_INST+strings.TrimSpace(answer.Content))...)
+		dialogTokens = append(dialogTokens, tokenizer.EOS_ID)
+	}
+
+	dialogTokens = append(dialogTokens, tokenizer.BOS_ID)
+	dialogTokens = append(dialogTokens, tokenizer.Encode(B_INST+" "+strings.TrimSpace(dialog[len(dialog)-1].Content)+" "+E_INST)...)
+
+	generate(config, runState, w, tokenizer.Decoder(out), temperature, dialogTokens, maxGenLen)
 }
