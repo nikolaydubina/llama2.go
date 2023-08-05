@@ -7,22 +7,16 @@ import (
 	"strings"
 )
 
-const (
-	BOS = "<s>\n"
-)
-
 // TokenDecoder converts tokens into strings to writer.
 type TokenDecoder struct {
-	BOS_ID          int
-	tokenizer       Tokenizer
+	Tokenizer
 	out             io.StringWriter
 	stripWhiteSpace bool
 }
 
 func NewTokenDecoder(tokenizer Tokenizer, out io.StringWriter) *TokenDecoder {
 	return &TokenDecoder{
-		BOS_ID:    1,
-		tokenizer: tokenizer,
+		Tokenizer: tokenizer,
 		out:       out,
 	}
 }
@@ -33,15 +27,15 @@ func (v *TokenDecoder) WriteToken(tokens ...int) {
 		// following BOS token (1), sentencepiece decoder strips any leading whitespace
 		if token == 1 {
 			v.stripWhiteSpace = true
-			b.WriteString(BOS)
+			b.WriteString(v.Tokenizer.BOS)
 			continue
 		}
-		if v.stripWhiteSpace && v.tokenizer.Words[token][0] == ' ' {
+		if v.stripWhiteSpace && v.Tokenizer.Words[token][0] == ' ' {
 			v.stripWhiteSpace = false
-			b.WriteString(v.tokenizer.Words[token][1:])
+			b.WriteString(v.Tokenizer.Words[token][1:])
 			continue
 		}
-		v.out.WriteString(v.tokenizer.Words[token])
+		v.out.WriteString(v.Tokenizer.Words[token])
 	}
 }
 
@@ -51,6 +45,7 @@ type Tokenizer struct {
 	MaxTokenLen int // unused in Go version
 	BOS_ID      int
 	EOS_ID      int
+	BOS         string
 }
 
 func NewTokenizerFromFile(vocabSize int, r io.Reader) Tokenizer {
@@ -59,6 +54,7 @@ func NewTokenizerFromFile(vocabSize int, r io.Reader) Tokenizer {
 		Scores: make([]float32, 0, vocabSize),
 		BOS_ID: 1, // llama2 uses BOS = 1 in tokenizer
 		EOS_ID: 2, // llama2 uses EOS = 2 in tokenizer
+		BOS:    "<s>\n",
 	}
 
 	var maxTokenLen int32

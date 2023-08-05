@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	_ "embed"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -74,8 +75,6 @@ func main() {
 
 	runState := llama2.NewRunState(config)
 
-	defer func(start time.Time) { log.Printf("achieved tok/s: %f\n", float64(steps)/time.Since(start).Seconds()) }(time.Now())
-
 	if !isDialog {
 		var promptTokens []int
 		promptTokens = append(promptTokens, tokenizer.BOS_ID)
@@ -96,9 +95,11 @@ func generate(
 	promptTokens []int,
 	maxGenLen int,
 ) {
+	tokens := 0
+	defer func(start time.Time) { log.Printf("tok/s: %f\n", float64(tokens)/time.Since(start).Seconds()) }(time.Now())
+
 	for token, pos := promptTokens[0], 0; pos < maxGenLen; pos++ {
-		// forward the transformer to get logits for the next token
-		llama2.Transformer(token, pos, config, runState, w)
+		llama2.TransformerForward(token, pos, config, runState, w)
 
 		// different strategies to pick next token from probabilities or current prompt
 		if pos < len(promptTokens) {
@@ -121,6 +122,11 @@ func generate(
 		}
 
 		tokenizerDecoder.WriteToken(token)
+		tokens++
+
+		if token == tokenizerDecoder.EOS_ID {
+			break
+		}
 	}
 }
 
@@ -141,8 +147,9 @@ var DialogSystemPromptShort string
 type Role string
 
 const (
-	System Role = "system"
-	User   Role = "user"
+	System    Role = "system"
+	User      Role = "user"
+	Assistant Role = "assistant"
 )
 
 type Message struct {
@@ -150,9 +157,46 @@ type Message struct {
 	Content string
 }
 
-func (m Message) String() string { return fmt.Sprintf("%s: %s", m.Role, m.Content) }
+func TokenizeSystemMessage(tokenizer llama2.Tokenizer, m Message) (tokens []int) {
+	tokens = append(tokens, tokenizer.BOS_ID)
+	tokens = append(tokens, tokenizer.Encode(strings.TrimSpace(m.Content))...)
+	tokens = append(tokens, tokenizer.EOS_ID)
+	return tokens
+}
+
+func TokenizeQueryResponsePair(tokenizer llama2.Tokenizer, query, response Message) (tokens []int) {
+	tokens = append(tokens, tokenizer.BOS_ID)
+	tokens = append(tokens, tokenizer.Encode(B_INST+" "+strings.TrimSpace(query.Content)+" "+E_INST+strings.TrimSpace(response.Content))...)
+	tokens = append(tokens, tokenizer.EOS_ID)
+	return tokens
+}
+
+func (m Message) RenderConsole(out io.Writer) { fmt.Fprintf(out, "%s: %s\n", m.Role, m.Content) }
+
+func ValidateDialogRoles(dialog []Message) error {
+	if len(dialog) == 0 {
+		return errors.New("dialog is empty")
+	}
+	if lastRole := dialog[len(dialog)-1].Role; lastRole != Assistant {
+		return fmt.Errorf("expected last message from role(%s), but got from role(%s)", Assistant, lastRole)
+	}
+	for i, m := range dialog {
+		var expRole Role = System
+		if i > 0 {
+			expRole = User
+			if i%2 == 0 {
+				expRole = Assistant
+			}
+		}
+		if m.Role != expRole {
+			return fmt.Errorf("expected roles System/User/Assistant/User/Assistant/..., at i(%d) expected(%s) but got role(%s)", i, expRole, m.Role)
+		}
+	}
+	return nil
+}
 
 // RunDialog transforms dialog messages into prompts for model to predict, boots dialog with standard messages.
+// If dialog is provided, last message should be from Assistant.
 func RunDialog(
 	config llama2.Config,
 	tokenizer llama2.Tokenizer,
@@ -167,46 +211,47 @@ func RunDialog(
 		maxGenLen = config.SeqLen - 1
 	}
 
-	// dialog startup
 	if len(dialog) == 0 || dialog[0].Role != System {
-		dialog = append([]Message{{Role: System, Content: DialogSystemPromptShort}}, dialog...)
-	}
-	dialog = append([]Message{{Role: dialog[1].Role, Content: B_SYS + dialog[0].Content + E_SYS + dialog[1].Content}}, dialog[2:]...)
-
-	// dialog roles check
-	for i, m := range dialog {
-		var expRole Role = System
-		if i%2 == 0 {
-			expRole = User
-		}
-		if m.Role != expRole {
-			panic(fmt.Errorf("expected roles User/System/User/..., at i(%d) expected(%s) but got role(%s)", i, expRole, m.Role))
-		}
+		dialog = append([]Message{{Role: System, Content: B_SYS + DialogSystemPromptShort + E_SYS}}, dialog...)
 	}
 
-	if lastRole := dialog[len(dialog)-1].Role; lastRole != User {
-		panic(fmt.Errorf("last prompt should be from role(%s) but got role(%s)", User, lastRole))
+	if err := ValidateDialogRoles(dialog[1:]); err != nil {
+		log.Fatal(err)
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		prompt := scanner.Text()
-		dialog := []Message{{Role: User, Content: prompt}}
+	for _, m := range dialog {
+		m.RenderConsole(os.Stdout)
 	}
 
-	// collect dialog tokens
-	var dialogTokens []int
-	for i := 0; i+1 < len(dialog); i += 2 {
-		prompt := dialog[i]
-		answer := dialog[i+1]
+	var tokens []int
 
-		dialogTokens = append(dialogTokens, tokenizer.BOS_ID)
-		dialogTokens = append(dialogTokens, tokenizer.Encode(B_INST+" "+prompt.String()+" "+E_INST+strings.TrimSpace(answer.Content))...)
-		dialogTokens = append(dialogTokens, tokenizer.EOS_ID)
+	// generate tokens from dialog so far
+	tokens = append(tokens, TokenizeSystemMessage(tokenizer, dialog[0])...)
+	for i := 1; i+1 < len(dialog); i += 2 {
+		tokens = append(tokens, TokenizeQueryResponsePair(tokenizer, dialog[i], dialog[i+1])...)
 	}
 
-	dialogTokens = append(dialogTokens, tokenizer.BOS_ID)
-	dialogTokens = append(dialogTokens, tokenizer.Encode(B_INST+" "+strings.TrimSpace(dialog[len(dialog)-1].Content)+" "+E_INST)...)
+	// get transformer up to speed. make it read all tokens in dialog so far
+	for token, pos := tokens[0], 0; pos < len(tokens); pos++ {
+		llama2.TransformerForward(token, pos, config, runState, w)
+	}
 
-	generate(config, runState, w, tokenizer.Decoder(out), temperature, dialogTokens, maxGenLen)
+	// ask prompt from user, encode it, run model through it, then generate model response
+	out.WriteString(fmt.Sprintf("%s: ", User))
+	for scanner := bufio.NewScanner(os.Stdin); scanner.Scan(); {
+		dialog = append(dialog, Message{Role: User, Content: scanner.Text()})
+
+		var lastQueryTokens []int
+		lastQueryTokens = append(lastQueryTokens, tokenizer.BOS_ID)
+		lastQueryTokens = append(lastQueryTokens, tokenizer.Encode(B_INST+" "+strings.TrimSpace(dialog[len(dialog)-1].Content)+" "+E_INST)...)
+
+		out.WriteString(fmt.Sprintf("%s: ", Assistant))
+		generate(config, runState, w, tokenizer.Decoder(out), temperature, lastQueryTokens, maxGenLen)
+
+		tokens = append(tokens, lastQueryTokens...)
+		tokens = append(tokens, tokenizer.EOS_ID)
+		out.WriteString("\n")
+
+		out.WriteString(fmt.Sprintf("%s: ", User))
+	}
 }
