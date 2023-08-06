@@ -19,7 +19,7 @@ type RunState struct {
 	V      []float32 // (dim,) value
 	Att    []float32 // (n_heads, seq_len) buffer for scores/attention values
 	Logits []float32 // output logits
-	// kv cache
+	// cache
 	KCache []float32 // (layer, seq_len, dim)
 	VCache []float32 // (layer, seq_len, dim)
 }
