@@ -116,10 +116,8 @@ func TransformerForward(token int, pos int, config Config, s RunState, w Transfo
 
 		// save key,value at this time step (pos) to our kv cache
 		loff := l * config.SeqLen * dim
-		keyCacheRow := s.KeyCache[(loff + pos*dim):(loff + (pos+1)*dim)]
-		valCacheRow := s.ValCache[(loff + pos*dim):(loff + (pos+1)*dim)]
-		copy(keyCacheRow, s.K)
-		copy(valCacheRow, s.V)
+		copy(s.KeyCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.K)
+		copy(s.ValCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.V)
 
 		// multithread attention. iterate over all heads
 		// C code had pragma here, using goroutines
