@@ -20,24 +20,24 @@ type RunState struct {
 	Att    []float32 // (n_heads, seq_len) buffer for scores/attention values
 	Logits []float32 // output logits
 	// kv cache
-	KeyCache []float32 // (layer, seq_len, dim)
-	ValCache []float32 // (layer, seq_len, dim)
+	KCache []float32 // (layer, seq_len, dim)
+	VCache []float32 // (layer, seq_len, dim)
 }
 
 func NewRunState(config Config) RunState {
 	return RunState{
-		X:        make([]float32, config.Dim),
-		XB:       make([]float32, config.Dim),
-		XB2:      make([]float32, config.Dim),
-		HB:       make([]float32, config.HiddenDim),
-		HB2:      make([]float32, config.HiddenDim),
-		Q:        make([]float32, config.Dim),
-		K:        make([]float32, config.Dim),
-		V:        make([]float32, config.Dim),
-		Att:      make([]float32, (config.NumHeads * config.SeqLen)),
-		Logits:   make([]float32, config.VocabSize),
-		KeyCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
-		ValCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
+		X:      make([]float32, config.Dim),
+		XB:     make([]float32, config.Dim),
+		XB2:    make([]float32, config.Dim),
+		HB:     make([]float32, config.HiddenDim),
+		HB2:    make([]float32, config.HiddenDim),
+		Q:      make([]float32, config.Dim),
+		K:      make([]float32, config.Dim),
+		V:      make([]float32, config.Dim),
+		Att:    make([]float32, (config.NumHeads * config.SeqLen)),
+		Logits: make([]float32, config.VocabSize),
+		KCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
+		VCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
 	}
 }
 
@@ -116,8 +116,8 @@ func TransformerForward(token int, pos int, config Config, s RunState, w Transfo
 
 		// save key,value at this time step (pos) to our kv cache
 		loff := l * config.SeqLen * dim
-		copy(s.KeyCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.K)
-		copy(s.ValCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.V)
+		copy(s.KCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.K)
+		copy(s.VCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.V)
 
 		// multithread attention. iterate over all heads
 		// C code had pragma here, using goroutines
@@ -133,7 +133,7 @@ func TransformerForward(token int, pos int, config Config, s RunState, w Transfo
 				// iterate over all timesteps, including the current one
 				for t := 0; t <= pos; t++ {
 					// get the key vector for this head and at this timestamp
-					k := s.KeyCache[(loff + t*dim + h*headSize):(loff + t*dim + (h+1)*headSize)]
+					k := s.KCache[(loff + t*dim + h*headSize):(loff + t*dim + (h+1)*headSize)]
 					// calculate the attention score as the dot product of q and k
 					var score float32
 					for i := 0; i < headSize; i++ {
@@ -155,7 +155,7 @@ func TransformerForward(token int, pos int, config Config, s RunState, w Transfo
 				for t := 0; t <= pos; t++ {
 					a := att[t]
 					for i := 0; i < headSize; i++ {
-						s.XB[((h * headSize) + i)] += a * s.ValCache[loff+t*dim+h*headSize+i]
+						s.XB[((h * headSize) + i)] += a * s.VCache[loff+t*dim+h*headSize+i]
 					}
 				}
 			}(h)
