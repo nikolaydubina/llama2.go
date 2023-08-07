@@ -67,9 +67,9 @@ func main() {
 
 	// the current position we are in
 	timeStart := time.Now()
-	var token int = 1          // 1 = BOS token in llama-2 sentencepiece
-	out.Write([]byte("<s>\n")) // explicit print initial BOS token for stylistic symmetry reasons
-	for pos := 0; pos < steps; pos++ {
+	var token int = 1 // 1 = BOS token in llama-2 sentencepiece
+	var pos = 0
+	for pos < steps {
 		// forward the transformer to get logits for the next token
 		llama2.Transformer(token, pos, config, runState, w)
 
@@ -92,8 +92,14 @@ func main() {
 				next = nn.Sample(runState.Logits)
 			}
 		}
+		pos++
 
-		// following BOS token (1), sentencepiece decoder strips any leading whitespace
+		// data-dependent terminating condition: the BOS (1) token delimits sequences
+		if next == 1 {
+			break
+		}
+
+		// following BOS (1) token, sentencepiece decoder strips any leading whitespace
 		var tokenStr string
 		if token == 1 && vocab.Words[next][0] == ' ' {
 			tokenStr = vocab.Words[next][1:]
@@ -107,5 +113,5 @@ func main() {
 	}
 	out.Write([]byte("\n"))
 
-	log.Printf("achieved tok/s: %f\n", float64(steps)/time.Since(timeStart).Seconds())
+	log.Printf("achieved tok/s: %f\n", float64(pos-1)/time.Since(timeStart).Seconds())
 }
