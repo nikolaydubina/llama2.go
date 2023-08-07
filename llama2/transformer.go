@@ -9,6 +9,7 @@ import (
 
 type RunState struct {
 	// current wave of activations
+
 	X      []float32 // (dim,) activation at current time stamp
 	XB     []float32 // (dim,) same, but inside a residual branch
 	XB2    []float32 // (dim,) an additional buffer just for convenience
