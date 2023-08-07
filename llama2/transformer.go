@@ -23,24 +23,24 @@ type RunState struct {
 
 	// kv cache
 
-	KeyCache []float32 // (layer, seq_len, dim)
-	ValCache []float32 // (layer, seq_len, dim)
+	KCache []float32 // (layer, seq_len, dim)
+	VCache []float32 // (layer, seq_len, dim)
 }
 
 func NewRunState(config Config) RunState {
 	return RunState{
-		X:        make([]float32, config.Dim),
-		XB:       make([]float32, config.Dim),
-		XB2:      make([]float32, config.Dim),
-		HB:       make([]float32, config.HiddenDim),
-		HB2:      make([]float32, config.HiddenDim),
-		Q:        make([]float32, config.Dim),
-		K:        make([]float32, config.Dim),
-		V:        make([]float32, config.Dim),
-		Att:      make([]float32, (config.NumHeads * config.SeqLen)),
-		Logits:   make([]float32, config.VocabSize),
-		KeyCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
-		ValCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
+		X:      make([]float32, config.Dim),
+		XB:     make([]float32, config.Dim),
+		XB2:    make([]float32, config.Dim),
+		HB:     make([]float32, config.HiddenDim),
+		HB2:    make([]float32, config.HiddenDim),
+		Q:      make([]float32, config.Dim),
+		K:      make([]float32, config.Dim),
+		V:      make([]float32, config.Dim),
+		Att:    make([]float32, (config.NumHeads * config.SeqLen)),
+		Logits: make([]float32, config.VocabSize),
+		KCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
+		VCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
 	}
 }
 
@@ -95,35 +95,29 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 		// attention RMSNorm
 		nn.RMSNorm(s.XB, x, w.RMSAttentionWeight[l*dim:((l+1)*dim)])
 
-		// qkv matmuls for this position
+		// Q,K,V matmuls for this position
 		wg.Add(3)
 		go func() { nn.MatMul(s.Q, s.XB, w.WQ[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
 		go func() { nn.MatMul(s.K, s.XB, w.WK[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
 		go func() { nn.MatMul(s.V, s.XB, w.WV[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
 		wg.Wait()
 
-		// apply RoPE rotation to the q and k vectors for each head
-		for h := 0; h < config.NumHeads; h++ {
-			// get the q and k vectors for this head
-			q := s.Q[(h * headSize):((h + 1) * headSize)]
-			k := s.K[(h * headSize):((h + 1) * headSize)]
-			// rotate q and k by the FreqCISReal and FreqCISImag
-			for i := 0; i < headSize; i += 2 {
-				q0, q1 := q[i], q[i+1]
-				k0, k1 := k[i], k[i+1]
-				fcr := freqCISRealRow[i/2]
-				fci := freqCISImagRow[i/2]
-				q[i] = q0*fcr - q1*fci
-				q[i+1] = q0*fci + q1*fcr
-				k[i] = k0*fcr - k1*fci
-				k[i+1] = k0*fci + k1*fcr
-			}
+		// RoPE relative positional encoding: complex-valued rotate Q and K by FreqCIS in each head
+		for i := 0; i+1 < dim; i += 2 {
+			q0, q1 := s.Q[i], s.Q[i+1]
+			k0, k1 := s.K[i], s.K[i+1]
+			fcr := freqCISRealRow[(i%headSize)/2]
+			fci := freqCISImagRow[(i%headSize)/2]
+			s.Q[i] = q0*fcr - q1*fci
+			s.Q[i+1] = q0*fci + q1*fcr
+			s.K[i] = k0*fcr - k1*fci
+			s.K[i+1] = k0*fci + k1*fcr
 		}
 
 		// save key and val at this time step (pos) to cache
 		loff := l * config.SeqLen * dim
-		copy(s.KeyCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.K) // key cache row
-		copy(s.ValCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.V) // val cache row
+		copy(s.KCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.K)
+		copy(s.VCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.V)
 
 		// multithread attention. iterate over all heads
 		// C code had pragma here, using goroutines
@@ -139,7 +133,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 				// iterate over all timesteps, including the current one
 				for t := 0; t <= pos; t++ {
 					// get the key vector for this head and at this timestamp
-					k := s.KeyCache[(loff + t*dim + h*headSize):(loff + t*dim + (h+1)*headSize)]
+					k := s.KCache[(loff + t*dim + h*headSize):(loff + t*dim + (h+1)*headSize)]
 					// calculate the attention score as the dot product of q and k
 					var score float32
 					for i := 0; i < headSize; i++ {
@@ -161,7 +155,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 				for t := 0; t <= pos; t++ {
 					a := att[t]
 					for i := 0; i < headSize; i++ {
-						s.XB[((h * headSize) + i)] += a * s.ValCache[loff+t*dim+h*headSize+i]
+						s.XB[((h * headSize) + i)] += a * s.VCache[loff+t*dim+h*headSize+i]
 					}
 				}
 			}(h)
