@@ -67,3 +67,32 @@ To disable optimizations update `llama2/transformer.go` import to package withou
 * https://github.com/gotzmann/llama.go (`llama.cpp` port in Go)
 * https://github.com/go-skynet/go-llama.cpp (`cgo` bidning `llama.cpp`)
 * https://github.com/go-skynet/LocalAI (`cgo` binding API of many models)
+
+### Appendix A: Inference Architecture
+
+![](./doc/llama2.svg)
+
+### Appendix B: Go comments in fields
+
+It is important to isolate comment for group from comment for field so that IDE detects and suggests correct comment for field (the one on the right) rather then one above it for the whole group.
+
+bad, IDE will suggest `// weights for mat muls` for `WQ`:
+```go
+type TransformerWeights struct {
+	// weights for mat muls
+	WQ []float32 // (num_layers, dim, dim)
+	WK []float32 // (num_layers, dim, dim)
+	WV []float32 // (num_layers, dim, dim)
+	WO []float32 // (num_layers, dim, dim)
+```
+
+good, IDE will suggest `// (num_layers, dim, dim)` for `WQ`:
+```go
+type TransformerWeights struct {
+	// weights for mat muls
+
+	WQ []float32 // (num_layers, dim, dim)
+	WK []float32 // (num_layers, dim, dim)
+	WV []float32 // (num_layers, dim, dim)
+	WO []float32 // (num_layers, dim, dim)
+```

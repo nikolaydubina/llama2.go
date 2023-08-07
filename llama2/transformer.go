@@ -9,6 +9,7 @@ import (
 
 type RunState struct {
 	// current wave of activations
+
 	X      []float32 // (dim,) activation at current time stamp
 	XB     []float32 // (dim,) same, but inside a residual branch
 	XB2    []float32 // (dim,) an additional buffer just for convenience
@@ -18,8 +19,10 @@ type RunState struct {
 	K      []float32 // (dim,) key
 	V      []float32 // (dim,) value
 	Att    []float32 // (n_heads, seq_len) buffer for scores/attention values
-	Logits []float32 // output logits
+	Logits []float32 // (vocab_size) output logits
+
 	// kv cache
+
 	KeyCache []float32 // (layer, seq_len, dim)
 	ValCache []float32 // (layer, seq_len, dim)
 }
@@ -42,29 +45,33 @@ func NewRunState(config Config) RunState {
 }
 
 type TransformerWeights struct {
-	TokenEmbeddingTable []float32
+	TokenEmbeddingTable []float32 // (vocab_size, dim)
 
-	RMSAttentionWeight []float32
-	RMSFFNWeight       []float32
-	RMSFinalWeight     []float32
+	RMSAttentionWeight []float32 // (num_layers, dim)
+	RMSFFNWeight       []float32 // (num_layers, dim)
+	RMSFinalWeight     []float32 // (dim,)
 
 	// weights for mat muls
-	WQ []float32
-	WK []float32
-	WV []float32
-	WO []float32
+
+	WQ []float32 // (num_layers, dim, dim)
+	WK []float32 // (num_layers, dim, dim)
+	WV []float32 // (num_layers, dim, dim)
+	WO []float32 // (num_layers, dim, dim)
 
 	// weights for FFN
-	W1 []float32
-	W2 []float32
-	W3 []float32
+
+	W1 []float32 // (num_layers, dim, hidden_dim)
+	W2 []float32 // (num_layers, hidden_dim, dim)
+	W3 []float32 // (num_layers, dim, hidden_dim)
 
 	// frequency CIS for RoPE relative positional embeddings
-	FreqCISReal []float32
-	FreqCISImag []float32
+
+	FreqCISReal []float32 // (seq_len, head_size / 2)
+	FreqCISImag []float32 // (seq_len, head_size / 2)
 
 	// (optional) classifier weights for the logits on the last layer
-	WCLS []float32
+
+	WCLS []float32 // (vocab_size, dim)
 }
 
 func Transformer(token int, pos int, config Config, s RunState, w TransformerWeights) {
