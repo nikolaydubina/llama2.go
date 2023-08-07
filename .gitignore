@@ -26,3 +26,5 @@ stories42M.bin
 
 *.bin
 !tokenizer.bin
+
+*.DS_Store
