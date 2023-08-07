@@ -74,7 +74,8 @@ type TransformerWeights struct {
 	WCLS []float32 // (vocab_size, dim)
 }
 
-func Transformer(token int, pos int, config Config, s RunState, w TransformerWeights) {
+// TransformerForward pass updates current run state and as outcome gets next token probabilities
+func TransformerForward(token int, pos int, config Config, s RunState, w TransformerWeights) {
 	var wg sync.WaitGroup
 
 	// a few convenience variables

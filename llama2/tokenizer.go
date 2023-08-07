@@ -4,41 +4,82 @@ import (
 	"encoding/binary"
 	"io"
 	"log"
+	"strings"
 )
 
-type Vocab struct {
+// TokenDecoder converts tokens into strings to writer.
+type TokenDecoder struct {
+	Tokenizer
+	out             io.StringWriter
+	stripWhiteSpace bool
+}
+
+func NewTokenDecoder(tokenizer Tokenizer, out io.StringWriter) *TokenDecoder {
+	return &TokenDecoder{
+		Tokenizer: tokenizer,
+		out:       out,
+	}
+}
+
+func (v *TokenDecoder) WriteToken(tokens ...int) {
+	var b strings.Builder
+	for _, token := range tokens {
+		// following BOS token (1), sentencepiece decoder strips any leading whitespace
+		if token == 1 {
+			v.stripWhiteSpace = true
+			b.WriteString(v.Tokenizer.BOS)
+			continue
+		}
+		if v.stripWhiteSpace && v.Tokenizer.Words[token][0] == ' ' {
+			v.stripWhiteSpace = false
+			b.WriteString(v.Tokenizer.Words[token][1:])
+			continue
+		}
+		v.out.WriteString(v.Tokenizer.Words[token])
+	}
+}
+
+type Tokenizer struct {
 	Words       []string
 	Scores      []float32
 	MaxTokenLen int // unused in Go version
+	BOS_ID      int
+	EOS_ID      int
+	BOS         string
 }
 
-func NewVocabFromFile(vocabSize int, r io.Reader) Vocab {
-	vocab := Vocab{
+func NewTokenizerFromFile(vocabSize int, r io.Reader) Tokenizer {
+	tokenizer := Tokenizer{
 		Words:  make([]string, 0, vocabSize),
 		Scores: make([]float32, 0, vocabSize),
+		BOS_ID: 1, // llama2 uses BOS = 1 in tokenizer
+		EOS_ID: 2, // llama2 uses EOS = 2 in tokenizer
+		BOS:    "<s>\n",
 	}
 
 	var maxTokenLen int32
 	binary.Read(r, Endian, &maxTokenLen)
-	vocab.MaxTokenLen = int(maxTokenLen)
+	tokenizer.MaxTokenLen = int(maxTokenLen)
 
 	for i := 0; i < vocabSize; i++ {
 		var score float32
 		binary.Read(r, Endian, &score)
-		vocab.Scores = append(vocab.Scores, score)
+		tokenizer.Scores = append(tokenizer.Scores, score)
 
 		var len int32
 		binary.Read(r, Endian, &len)
 
 		var word []byte = make([]byte, len)
 		binary.Read(r, Endian, word)
-		vocab.Words = append(vocab.Words, string(word))
+		tokenizer.Words = append(tokenizer.Words, string(word))
 	}
 
-	return vocab
+	return tokenizer
 }
 
-func (v Vocab) EncodeWord(s string) int {
+func (v Tokenizer) Decoder(out io.StringWriter) *TokenDecoder { return NewTokenDecoder(v, out) }
+
+func (v Tokenizer) EncodeWord(s string) int {
 	for i, word := range v.Words {
 		if word == s {
 			return i
@@ -47,7 +88,7 @@ func (v Vocab) EncodeWord(s string) int {
 	return -1
 }
 
-func (v Vocab) Encode(s string) (tokens []int) {
+func (v Tokenizer) Encode(s string) (tokens []int) {
 	// first encode every individual byte in the input string
 	for i := 0; i < len(s); i++ {
 		id := v.EncodeWord(string(s[i : i+1]))
