@@ -2,9 +2,9 @@ package nn_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/nikolaydubina/llama2.go/nn"
 )
 
@@ -38,8 +38,8 @@ func TestSoftMax(t *testing.T) {
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("%d: %#v", i, tc), func(t *testing.T) {
 			nn.SoftMax(tc.x)
-			if diff := cmp.Diff(tc.exp, tc.x); diff != "" {
-				t.Errorf("%s", diff)
+			if !slices.Equal(tc.exp, tc.x) {
+				t.Errorf("got %v, exp %v", tc.x, tc.exp)
 			}
 		})
 	}
@@ -92,8 +92,8 @@ func TestMatMul(t *testing.T) {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			got := make([]float32, len(tc.exp))
 			nn.MatMul(got, tc.x, tc.w)
-			if diff := cmp.Diff(tc.exp, got); diff != "" {
-				t.Errorf("%s", diff)
+			if !slices.Equal(tc.exp, got) {
+				t.Errorf("got %v, exp %v", got, tc.exp)
 			}
 		})
 	}

@@ -3,9 +3,9 @@ package nnfast_test
 import (
 	"fmt"
 	"math/rand"
+	"slices"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/nikolaydubina/llama2.go/exp/nnfast"
 	"github.com/nikolaydubina/llama2.go/nn"
 )
@@ -40,8 +40,8 @@ func TestSoftMax(t *testing.T) {
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("%d: %#v", i, tc), func(t *testing.T) {
 			nnfast.SoftMax(tc.x)
-			if diff := cmp.Diff(tc.exp, tc.x); diff != "" {
-				t.Errorf("%s", diff)
+			if !slices.Equal(tc.exp, tc.x) {
+				t.Errorf("got %v, exp %v", tc.x, tc.exp)
 			}
 		})
 	}
@@ -121,8 +121,8 @@ func TestMatMul(t *testing.T) {
 			got := make([]float32, len(tc.exp))
 			nnfast.NumThreads = tc.numThreads
 			nnfast.MatMul(got, tc.x, tc.w)
-			if diff := cmp.Diff(tc.exp, got); diff != "" {
-				t.Errorf("%s", diff)
+			if !slices.Equal(tc.exp, got) {
+				t.Errorf("got %v, exp %v", got, tc.exp)
 			}
 		})
 	}
@@ -153,8 +153,8 @@ func FuzzMatMul(f *testing.F) {
 		o1 := make([]float32, m)
 		nn.MatMul(o1, x, w)
 
-		if diff := cmp.Diff(o1, o); diff != "" {
-			t.Errorf("x(%v) w(%v) o(%v) o_exp(%v): %s", x, w, o, o1, diff)
+		if !slices.Equal(o1, o) {
+			t.Errorf("got %v, exp %v", o, o1)
 		}
 	})
 }
