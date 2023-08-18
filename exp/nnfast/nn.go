@@ -3,6 +3,7 @@ package nnfast
 import (
 	"math"
 	"math/rand"
+	"sort"
 	"sync"
 )
 
@@ -91,6 +92,16 @@ func MatMulParallel[T float32 | float64](xout, x, w []T) {
 // MatMul uses multiple optimizations
 func MatMul[T float32 | float64](xout, x, w []T) { MatMulParallel(xout, x, w) }
 
+func ArgMax[T float32 | float64](v []T) int {
+	maxi, maxv := 0, v[0]
+	for i, v := range v {
+		if v > maxv {
+			maxv, maxi = v, i
+		}
+	}
+	return maxi
+}
+
 // Sample index from probabilities, they must sum to 1
 func Sample[T float32 | float64](probabilities []T) int {
 	r := T(rand.Float32())
@@ -104,12 +115,48 @@ func Sample[T float32 | float64](probabilities []T) int {
 	return len(probabilities) - 1
 }
 
-func ArgMax[T float32 | float64](v []T) int {
-	maxi, maxv := 0, v[0]
-	for i, v := range v {
-		if v > maxv {
-			maxv, maxi = v, i
+// SampleTopP ("top-p" sampling, or "nucleus sampling") samples from the smallest set of
+// tokens that exceed probability topp. This way we never sample tokens that
+// have very low probabilities and are less likely to go "off the rails".
+// Notes on llama2.c: here not reusing probability index slice, since practically it is as fast to request new one.
+func SampleTopP[T float32 | float64](probabilities []T, topp T) int {
+	type PI struct {
+		prob  T
+		index int
+	}
+	pis := make([]PI, 0, len(probabilities))
+
+	// quicksort indices in descending order of probabilities
+	// values smaller than (1 - topp) / (n - 1) cannot be part of the result
+	// so for efficiency we crop these out as candidates before sorting
+	cutoff := (1.0 - topp) / T(len(probabilities)-1)
+	for i, p := range probabilities {
+		if p >= cutoff {
+			pis = append(pis, PI{prob: p, index: i})
 		}
 	}
-	return maxi
+	sort.Slice(pis, func(i, j int) bool { return pis[i].prob > pis[j].prob })
+
+	// truncate the list where cumulative probability exceeds topp
+	cumulativeProb := T(0)
+	lastIdx := len(pis) - 1 // in case of rounding errors consider all elements
+	for i, pi := range pis {
+		cumulativeProb += pi.prob
+		if cumulativeProb > topp {
+			lastIdx = i
+			break // we've exceeded topp by including lastIdx
+		}
+	}
+
+	// sample from the truncated list
+	r := T(rand.Float32()) * cumulativeProb
+	cdf := T(0)
+	for i := 0; i <= lastIdx; i++ {
+		cdf += pis[i].prob
+		if r < cdf {
+			return pis[i].index
+		}
+	}
+
+	return pis[lastIdx].index // in case of rounding errors
 }

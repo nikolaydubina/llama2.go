@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
+	nn "github.com/nikolaydubina/llama2.go/exp/nnfast"
 	"github.com/nikolaydubina/llama2.go/llama2"
-	"github.com/nikolaydubina/llama2.go/nn"
 )
 
 func main() {
@@ -17,12 +17,14 @@ func main() {
 		temperature        float64
 		steps              int
 		prompt             string
+		topp               float64
 	)
 
 	flag.StringVar(&checkpointFilePath, "checkpoint", "out/model.bin", "checkpoint binary file with weights")
-	flag.StringVar(&tokenizerFilePath, "tokenizer", "tokenizer.bin", "tokenizer binary file with vocabulary (get this from repo)")
-	flag.Float64Var(&temperature, "temperature", 0.9, "temperature is optional, 0 = (deterministic) argmax sampling, 1 = baseline")
+	flag.StringVar(&tokenizerFilePath, "tokenizer", "tokenizer.bin", "tokenizer binary file with vocabulary (get it from repo)")
+	flag.Float64Var(&temperature, "temperature", 0.9, "temperature (optional; 0 = deterministic argmax sampling; 1 = baseline)")
 	flag.IntVar(&steps, "steps", 256, "max number of steps to run for, 0: use seq_len")
+	flag.Float64Var(&topp, "topp", 0.9, "top-p in nucleus sampling (1.0 = off; 0.9 works well, but slower)")
 	flag.StringVar(&prompt, "prompt", "", "query to start with")
 	flag.Parse()
 
@@ -89,7 +91,13 @@ func main() {
 				// apply softmax to the logits to the probabilities for next token
 				nn.SoftMax(runState.Logits)
 				// we now want to sample from this distribution to get the next token
-				next = nn.Sample(runState.Logits)
+				if topp <= 0 || topp >= 1 {
+					// simply sample from the predicted probability distribution
+					next = nn.Sample(runState.Logits)
+				} else {
+					// top-p (nucleus) sampling, clamping the least likely tokens to zero
+					next = nn.SampleTopP(runState.Logits, float32(topp))
+				}
 			}
 		}
 		pos++
