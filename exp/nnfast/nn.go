@@ -51,8 +51,9 @@ func SoftMax[T float32 | float64](x []T) {
 	}
 }
 
-// MatMulUnroll in to multiple inlined operations
-func MatMulUnroll[T float32 | float64](xout, x, w []T) {
+// MatMulUnroll4 in to multiple inlined operations.
+// W (d,n) @ x (n,) -> xout (d,)
+func MatMulUnroll4[T float32 | float64](xout, x, w []T) {
 	for i := range xout {
 		var sum T
 		j := 0
@@ -73,7 +74,7 @@ func MatMulUnroll[T float32 | float64](xout, x, w []T) {
 func MatMulParallel[T float32 | float64](xout, x, w []T) {
 	n, m := len(xout), len(x)
 	if n < NumThreads {
-		MatMulUnroll(xout, x, w)
+		MatMulUnroll4(xout, x, w)
 		return
 	}
 	var wg sync.WaitGroup
@@ -84,7 +85,7 @@ func MatMulParallel[T float32 | float64](xout, x, w []T) {
 		if i == NumThreads-1 {
 			rowEnd = n
 		}
-		go func(rowStart, rowEnd int) { MatMulUnroll(xout[rowStart:rowEnd], x, w[m*rowStart:m*rowEnd]); wg.Done() }(rowStart, rowEnd)
+		go func(rowStart, rowEnd int) { MatMulUnroll4(xout[rowStart:rowEnd], x, w[m*rowStart:m*rowEnd]); wg.Done() }(rowStart, rowEnd)
 	}
 	wg.Wait()
 }

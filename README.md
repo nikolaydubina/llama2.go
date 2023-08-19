@@ -14,7 +14,7 @@ It was originally ported from [github.com/karpathy/llama2.c](https://github.com/
 3. `go install github.com/nikolaydubina/llama2.go@latest`
 4. `llama2.go -checkpoint=stories110M.bin -prompt="good morning said sun to trees"`
 
-```
+```bash
 $ llama2.go -checkpoint=stories110M.bin -prompt="good morning said sun to trees"
 2023/07/29 09:30:22 config: llama2.Config{Dim:768, HiddenDim:2048, NumLayers:12, NumHeads:12, NumKVHeads:12, VocabSize:32000, SeqLen:1024}
 <s>
@@ -31,7 +31,7 @@ Once upon a time, there was a boy named Timmy. Timmy was very hungry and wanted 
 ?" His mom said, "We are having chicken and rice." Timmy said, "Yum! I love chicken and rice."
 While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to watch a movie after
 2023/07/29 09:30:58 achieved tok/s: 28.619646
-````
+```
 
 ### Differences from `llama2.c`
 
@@ -39,12 +39,11 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 
 ### Performance
 
-| system                  | model           | [llama2.c](http://github.com/karpathy/llama2.c) | [llama.cpp](https://github.com/ggerganov/llama.cpp) | llama2.go (simple) | llama2.go (fast)   |
-| ------------------------| --------------- | ------------: | -----------------: | -----------------: | -----------------: |
-| Apple M1 Max 10CPU 64GB | stories42M      |  265.35 tok/s |                    |        25.68 tok/s |        82.79 tok/s |
-| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |                    |        10.47 tok/s |        39.28 tok/s |  
-| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |        20.36 tok/s |                    |         0.87 tok/s | 
-| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |        11.71 tok/s |                    |         0.38 tok/s |
+| system                  | model           | `llama2.c`    | `llama.cpp`        | `llama2.go` (simple) | `llama2.go` (fast)   |
+| ------------------------| --------------- | ------------: | -----------------: | -------------------: | -------------------: |
+| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |                    |          10.47 tok/s |          39.28 tok/s |  
+| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |        20.36 tok/s |                      |           0.87 tok/s | 
+| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |        11.71 tok/s |                      |           0.38 tok/s |
 
 ### Optimizations
 
@@ -67,6 +66,7 @@ To disable optimizations update `llama2/transformer.go` import to package withou
 * https://github.com/gotzmann/llama.go (`llama.cpp` port in Go)
 * https://github.com/go-skynet/go-llama.cpp (`cgo` bidning `llama.cpp`)
 * https://github.com/go-skynet/LocalAI (`cgo` binding API of many models)
+* https://github.com/ggerganov/llama.cpp
 
 ### Appendix A: Inference Architecture
 

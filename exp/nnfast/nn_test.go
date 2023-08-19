@@ -2,6 +2,7 @@ package nnfast_test
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"slices"
 	"testing"
@@ -155,6 +156,50 @@ func FuzzMatMul(f *testing.F) {
 
 		if !slices.Equal(o1, o) {
 			t.Errorf("got %v, exp %v", o, o1)
+		}
+	})
+}
+
+func FuzzSampleTopP(f *testing.F) {
+	tests := []struct {
+		probabilities []float32
+		topp          float32
+		allowedIdexes map[int]bool
+	}{
+		{
+			topp:          1.0,
+			probabilities: []float32{0.2, 0.2, 0.2, 0.2, 0.2},
+			allowedIdexes: map[int]bool{0: true, 1: true, 2: true, 3: true, 4: true},
+		},
+		{
+			topp:          0.7,
+			probabilities: []float32{0.05, 0.19, 0.21, 0.3, 0.25},
+			allowedIdexes: map[int]bool{3: true, 4: true, 2: true},
+		},
+		{
+			topp:          0.80,
+			probabilities: []float32{0.5, 0.3, 0.19, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.002},
+			allowedIdexes: map[int]bool{0: true, 1: true, 2: true},
+		},
+		{
+			topp:          0.81,
+			probabilities: []float32{0.5, 0.3, 0.19, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.001, 0.002},
+			allowedIdexes: map[int]bool{0: true, 1: true, 2: true},
+		},
+	}
+	f.Fuzz(func(t *testing.T, n int) {
+		for _, tc := range tests {
+			var s float32
+			for _, p := range tc.probabilities {
+				s += p
+			}
+			if math.Abs(float64(s)-1) > 1e-5 {
+				t.Fatalf("probabilities should sum up to 1, got %f (%#v)", s, s)
+			}
+			v := nnfast.SampleTopP(tc.probabilities, tc.topp)
+			if !tc.allowedIdexes[v] {
+				t.Errorf("unallowed index %d", v)
+			}
 		}
 	})
 }
