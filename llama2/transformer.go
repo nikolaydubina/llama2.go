@@ -86,12 +86,10 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 	hiddenDim := config.HiddenDim
 	headSize := config.HeadSize()
 
-	// copy the token embedding into x
 	copy(x, w.TokenEmbeddingTable[token*dim:(token+1)*dim])
 
 	// forward all layers
 	for l := 0; l < config.NumLayers; l++ {
-		// attention RMSNorm
 		nn.RMSNorm(s.XB, x, w.RMSAttentionWeight[l*dim:((l+1)*dim)])
 
 		// Q,K,V matmuls for this position

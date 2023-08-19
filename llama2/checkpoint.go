@@ -33,6 +33,8 @@ func NewConfigFromCheckpoint(r io.Reader) (Config, error) {
 	return config, nil
 }
 
+// NewTransformerWeightsFromCheckpoint reads binary checkpoint into weights.
+// Notes on llama2.c: for checkpoint not using `mmap`, instead scanning file
 func NewTransformerWeightsFromCheckpoint(config Config, r io.Reader, isSharedWeights bool) TransformerWeights {
 	w := TransformerWeights{
 		TokenEmbeddingTable: make([]float32, (config.VocabSize * config.Dim)),

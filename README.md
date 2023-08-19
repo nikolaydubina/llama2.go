@@ -4,7 +4,9 @@
 [![codecov](https://codecov.io/gh/nikolaydubina/llama2.go/branch/master/graph/badge.svg?token=OMf0git2BD)](https://codecov.io/gh/nikolaydubina/llama2.go)
 [![Go Reference](https://pkg.go.dev/badge/github.com/nikolaydubina/llama2.go.svg)](https://pkg.go.dev/github.com/nikolaydubina/llama2.go)
 
-This is a native Go inference of [LLaMA-2](https://ai.meta.com/llama/), as of `2023-08-01` state-of-the-art open source large language model from Meta. 
+(synced with llama2.c: `2023-08-19` https://github.com/karpathy/llama2.c/commit/bd182289c596fa6059eb7b3b7c8ccd04b5c90fc3)
+
+This is a native Go inference of [LLaMA-2](https://ai.meta.com/llama/), as of `2023-08-19` state-of-the-art open source large language model from Meta. 
 It was originally ported from [github.com/karpathy/llama2.c](https://github.com/karpathy/llama2.c) and is kept in sync with it. Additional features may be added.
 
 ### How to run?
@@ -33,10 +35,6 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 2023/07/29 09:30:58 achieved tok/s: 28.619646
 ```
 
-### Differences from `llama2.c`
-
-* for checkpoint not using `mmap`, instead scanning file
-
 ### Performance
 
 | system                  | model           | `llama2.c`    | `llama.cpp`        | `llama2.go` (simple) | `llama2.go` (fast)   |
@@ -56,7 +54,7 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 All optimizations are `Fuzz`-tested against basic algorithm, which is itself tested.
 To disable optimizations update `llama2/transformer.go` import to package without optimizations and rebuild.
 
-### Related Work
+### Related Work and References
 
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs (`llama2.c` Rust port)
@@ -67,32 +65,5 @@ To disable optimizations update `llama2/transformer.go` import to package withou
 * https://github.com/go-skynet/go-llama.cpp (`cgo` bidning `llama.cpp`)
 * https://github.com/go-skynet/LocalAI (`cgo` binding API of many models)
 * https://github.com/ggerganov/llama.cpp
-
-### Appendix A: Inference Architecture
-
-![](./doc/llama2.svg)
-
-### Appendix B: Go comments in fields
-
-It is important to isolate comment for group from comment for field so that IDE detects and suggests correct comment for field (the one on the right) rather then one above it for the whole group.
-
-bad, IDE will suggest `// weights for mat muls` for `WQ`:
-```go
-type TransformerWeights struct {
-	// weights for mat muls
-	WQ []float32 // (num_layers, dim, dim)
-	WK []float32 // (num_layers, dim, dim)
-	WV []float32 // (num_layers, dim, dim)
-	WO []float32 // (num_layers, dim, dim)
-```
-
-good, IDE will suggest `// (num_layers, dim, dim)` for `WQ`:
-```go
-type TransformerWeights struct {
-	// weights for mat muls
-
-	WQ []float32 // (num_layers, dim, dim)
-	WK []float32 // (num_layers, dim, dim)
-	WV []float32 // (num_layers, dim, dim)
-	WO []float32 // (num_layers, dim, dim)
-```
+* [RoPE](https://arxiv.org/pdf/2104.09864.pdf)
+* ["Attention Is All You Need"](https://arxiv.org/pdf/1706.03762.pdf)
