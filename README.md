@@ -36,11 +36,11 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 
 ### Performance
 
-| system                  | model           | llama2.c      | llama.cpp          | llama2.go (simple)   | llama2.go   (fast)   |
-| ------------------------| --------------- | ------------: | -----------------: | -------------------: | -------------------: |
-| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |                    |          10.47 tok/s |          39.28 tok/s |  
-| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |        20.36 tok/s |                      |           0.87 tok/s | 
-| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |        11.71 tok/s |                      |           0.38 tok/s |
+| system                  | model           | llama2.c      | llama.cpp          | llama2.go (simple) | llama2.go (fast) |
+| ------------------------| --------------- | ------------: | -----------------: | -----------------: | ---------------: |
+| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |                    |        10.47 tok/s |      39.28 tok/s |  
+| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |        20.36 tok/s |                    |       0.87 tok/s | 
+| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |        11.71 tok/s |                    |       0.38 tok/s |
 
 ### Optimizations
 
