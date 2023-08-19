@@ -16,15 +16,15 @@ type RunState struct {
 	HB     []float32 // (hidden_dim,) buffer for hidden dimension in the FFN
 	HB2    []float32 // (hidden_dim,) buffer for hidden dimension in the FFN
 	Q      []float32 // (dim,) query
-	K      []float32 // (dim,) key
-	V      []float32 // (dim,) value
+	K      []float32 // (kv_dim,) key
+	V      []float32 // (kv_dim,) value
 	Att    []float32 // (n_heads, seq_len) buffer for scores/attention values
 	Logits []float32 // (vocab_size) output logits
 
 	// kv cache
 
-	KCache []float32 // (layer, seq_len, dim)
-	VCache []float32 // (layer, seq_len, dim)
+	KCache []float32 // (layer, seq_len, kv_dim)
+	VCache []float32 // (layer, seq_len, kv_dim)
 }
 
 func NewRunState(config Config) RunState {
@@ -35,12 +35,12 @@ func NewRunState(config Config) RunState {
 		HB:     make([]float32, config.HiddenDim),
 		HB2:    make([]float32, config.HiddenDim),
 		Q:      make([]float32, config.Dim),
-		K:      make([]float32, config.Dim),
-		V:      make([]float32, config.Dim),
+		K:      make([]float32, config.KVDim()),
+		V:      make([]float32, config.KVDim()),
 		Att:    make([]float32, (config.NumHeads * config.SeqLen)),
 		Logits: make([]float32, config.VocabSize),
-		KCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
-		VCache: make([]float32, (config.NumLayers * config.SeqLen * config.Dim)),
+		KCache: make([]float32, (config.NumLayers * config.SeqLen * config.KVDim())),
+		VCache: make([]float32, (config.NumLayers * config.SeqLen * config.KVDim())),
 	}
 }
 
@@ -52,11 +52,12 @@ type TransformerWeights struct {
 	RMSFinalWeight     []float32 // (dim,)
 
 	// weights for mat muls
+	// dim == n_heads * head_size
 
-	WQ []float32 // (num_layers, dim, dim)
-	WK []float32 // (num_layers, dim, dim)
-	WV []float32 // (num_layers, dim, dim)
-	WO []float32 // (num_layers, dim, dim)
+	WQ []float32 // (num_layers, dim, n_heads * head_size)
+	WK []float32 // (num_layers, dim, n_kv_heads * head_size)
+	WV []float32 // (num_layers, dim, n_kv_heads * head_size)
+	WO []float32 // (num_layers, n_heads * head_size, dim)
 
 	// weights for FFN
 
@@ -64,10 +65,10 @@ type TransformerWeights struct {
 	W2 []float32 // (num_layers, hidden_dim, dim)
 	W3 []float32 // (num_layers, dim, hidden_dim)
 
-	// frequency CIS for RoPE relative positional embeddings
+	// Deprecated: frequency CIS for RoPE relative positional embeddings
 
-	FreqCISReal []float32 // (seq_len, head_size / 2)
-	FreqCISImag []float32 // (seq_len, head_size / 2)
+	FreqCISReal []float32 // (seq_len, head_size / 2) Deprecated
+	FreqCISImag []float32 // (seq_len, head_size / 2) Deprecated
 
 	// (optional) classifier weights for the logits on the last layer
 
@@ -80,47 +81,56 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 	// a few convenience variables
 	x := s.X
 	dim := config.Dim
+	kvDim := config.KVDim()
+	kvMul := config.KVMul()
 	hiddenDim := config.HiddenDim
 	headSize := config.HeadSize()
 
-	// copy the token embedding into x
 	copy(x, w.TokenEmbeddingTable[token*dim:(token+1)*dim])
-
-	// pluck out the "pos" row of the FreqCISReal and FreqCISImag matrices
-	freqCISRealRow := w.FreqCISReal[(pos * headSize / 2):((pos + 1) * headSize / 2)]
-	freqCISImagRow := w.FreqCISImag[(pos * headSize / 2):((pos + 1) * headSize / 2)]
 
 	// forward all layers
 	for l := 0; l < config.NumLayers; l++ {
-		// attention RMSNorm
 		nn.RMSNorm(s.XB, x, w.RMSAttentionWeight[l*dim:((l+1)*dim)])
 
 		// Q,K,V matmuls for this position
 		wg.Add(3)
 		go func() { nn.MatMul(s.Q, s.XB, w.WQ[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
-		go func() { nn.MatMul(s.K, s.XB, w.WK[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
-		go func() { nn.MatMul(s.V, s.XB, w.WV[l*dim*dim:(l+1)*dim*dim]); wg.Done() }()
+		go func() { nn.MatMul(s.K, s.XB, w.WK[l*dim*kvDim:(l+1)*dim*kvDim]); wg.Done() }()
+		go func() { nn.MatMul(s.V, s.XB, w.WV[l*dim*kvDim:(l+1)*dim*kvDim]); wg.Done() }()
 		wg.Wait()
 
-		// RoPE relative positional encoding: complex-valued rotate Q and K by FreqCIS in each head
+		// RoPE relative positional encoding: complex-valued rotate q and k in each head
 		for i := 0; i+1 < dim; i += 2 {
-			q0, q1 := s.Q[i], s.Q[i+1]
-			k0, k1 := s.K[i], s.K[i+1]
-			fcr := freqCISRealRow[(i%headSize)/2]
-			fci := freqCISImagRow[(i%headSize)/2]
-			s.Q[i] = q0*fcr - q1*fci
-			s.Q[i+1] = q0*fci + q1*fcr
-			s.K[i] = k0*fcr - k1*fci
-			s.K[i+1] = k0*fci + k1*fcr
+			headDim := i % headSize
+			freq := 1.0 / math.Pow(10000, float64(headDim)/float64(headSize))
+			val := float64(pos) * freq
+			fcr := float32(math.Cos(val))
+			fci := float32(math.Sin(val))
+
+			// how many vectors? 2 = q & k, 1 = q only
+			rotN := 1
+			if i < kvDim {
+				rotN = 2
+			}
+
+			for v := 0; v < rotN; v++ {
+				vec := s.K
+				if v == 0 {
+					vec = s.Q
+				}
+				v0, v1 := vec[i], vec[i+1]
+				vec[i] = v0*fcr - v1*fci
+				vec[i+1] = v0*fci + v1*fcr
+			}
 		}
 
 		// save key and val at this time step (pos) to cache
-		loff := l * config.SeqLen * dim
-		copy(s.KCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.K)
-		copy(s.VCache[(loff+pos*dim):(loff+(pos+1)*dim)], s.V)
+		loff := l * config.SeqLen * kvDim
+		copy(s.KCache[(loff+pos*kvDim):(loff+(pos+1)*kvDim)], s.K)
+		copy(s.VCache[(loff+pos*kvDim):(loff+(pos+1)*kvDim)], s.V)
 
-		// multithread attention. iterate over all heads
-		// C code had pragma here, using goroutines
+		// multihead attention. iterate over all heads
+		// Notes on llama2.c: pragma here, using goroutines
 		wg.Add(config.NumHeads)
 		for h := 0; h < config.NumHeads; h++ {
 			go func(h int) {
@@ -133,7 +143,7 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 				// iterate over all timesteps, including the current one
 				for t := 0; t <= pos; t++ {
 					// get the key vector for this head and at this timestamp
-					k := s.KCache[(loff + t*dim + h*headSize):(loff + t*dim + (h+1)*headSize)]
+					k := s.KCache[(loff + t*kvDim + (h/kvMul)*headSize):(loff + t*kvDim + ((h+1)/kvMul)*headSize)]
 					// calculate the attention score as the dot product of q and k
 					var score float32
 					for i := 0; i < headSize; i++ {
@@ -148,14 +158,11 @@ func Transformer(token int, pos int, config Config, s RunState, w TransformerWei
 				nn.SoftMax(att[:pos+1])
 
 				// weighted sum of the values, store back into xb
-				// llama2.c uses memset. resetting to zero in loop is ok since it is next iterated over same slice anyways.
-				for i := 0; i < headSize; i++ {
-					s.XB[(h*headSize + i)] = 0
-				}
+				clear(s.XB[(h * headSize):((h + 1) * headSize)])
 				for t := 0; t <= pos; t++ {
 					a := att[t]
 					for i := 0; i < headSize; i++ {
-						s.XB[((h * headSize) + i)] += a * s.VCache[loff+t*dim+h*headSize+i]
+						s.XB[((h * headSize) + i)] += a * s.VCache[loff+t*kvDim+(h/kvMul)*headSize+i]
 					}
 				}
 			}(h)

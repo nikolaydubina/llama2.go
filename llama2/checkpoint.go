@@ -33,16 +33,18 @@ func NewConfigFromCheckpoint(r io.Reader) (Config, error) {
 	return config, nil
 }
 
+// NewTransformerWeightsFromCheckpoint reads binary checkpoint into weights.
+// Notes on llama2.c: for checkpoint not using `mmap`, instead scanning file
 func NewTransformerWeightsFromCheckpoint(config Config, r io.Reader, isSharedWeights bool) TransformerWeights {
 	w := TransformerWeights{
 		TokenEmbeddingTable: make([]float32, (config.VocabSize * config.Dim)),
 		RMSAttentionWeight:  make([]float32, (config.NumLayers * config.Dim)),
 		RMSFFNWeight:        make([]float32, (config.NumLayers * config.Dim)),
 		RMSFinalWeight:      make([]float32, config.Dim),
-		WQ:                  make([]float32, (config.NumLayers * config.Dim * config.Dim)),
-		WK:                  make([]float32, (config.NumLayers * config.Dim * config.Dim)),
-		WV:                  make([]float32, (config.NumLayers * config.Dim * config.Dim)),
-		WO:                  make([]float32, (config.NumLayers * config.Dim * config.Dim)),
+		WQ:                  make([]float32, (config.NumLayers * config.Dim * config.NumHeads * config.HeadSize())),
+		WK:                  make([]float32, (config.NumLayers * config.Dim * config.NumKVHeads * config.HeadSize())),
+		WV:                  make([]float32, (config.NumLayers * config.Dim * config.NumKVHeads * config.HeadSize())),
+		WO:                  make([]float32, (config.NumLayers * config.NumHeads * config.HeadSize() * config.Dim)),
 		W1:                  make([]float32, (config.NumLayers * config.Dim * config.HiddenDim)),
 		W2:                  make([]float32, (config.NumLayers * config.HiddenDim * config.Dim)),
 		W3:                  make([]float32, (config.NumLayers * config.Dim * config.HiddenDim)),

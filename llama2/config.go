@@ -11,3 +11,8 @@ type Config struct {
 }
 
 func (c Config) HeadSize() int { return c.Dim / c.NumHeads }
+
+func (c Config) KVDim() int { return (c.Dim * c.NumKVHeads) / c.NumHeads }
+
+// KVMul integer multiplier of the kv sharing in multiquery
+func (c Config) KVMul() int { return c.NumHeads / c.NumKVHeads }

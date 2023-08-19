@@ -4,8 +4,9 @@
 [![codecov](https://codecov.io/gh/nikolaydubina/llama2.go/branch/master/graph/badge.svg?token=OMf0git2BD)](https://codecov.io/gh/nikolaydubina/llama2.go)
 [![Go Reference](https://pkg.go.dev/badge/github.com/nikolaydubina/llama2.go.svg)](https://pkg.go.dev/github.com/nikolaydubina/llama2.go)
 
-This is a native Go inference of [LLaMA-2](https://ai.meta.com/llama/), as of `2023-08-01` state-of-the-art open source large language model from Meta. 
-It was originally ported from [github.com/karpathy/llama2.c](https://github.com/karpathy/llama2.c) and is kept in sync with it. Additional features may be added.
+This is a native Go inference of [LLaMA-2](https://ai.meta.com/llama/), as of `2023-08-19` state-of-the-art open source large language model from Meta. 
+It is ported from [github.com/karpathy/llama2.c](https://github.com/karpathy/llama2.c)@[`bd18228`](https://github.com/karpathy/llama2.c/commit/bd182289c596fa6059eb7b3b7c8ccd04b5c90fc3) on `2023-08-19`.
+Additional features may be added.
 
 ### How to run?
 
@@ -14,7 +15,7 @@ It was originally ported from [github.com/karpathy/llama2.c](https://github.com/
 3. `go install github.com/nikolaydubina/llama2.go@latest`
 4. `llama2.go -checkpoint=stories110M.bin -prompt="good morning said sun to trees"`
 
-```
+```bash
 $ llama2.go -checkpoint=stories110M.bin -prompt="good morning said sun to trees"
 2023/07/29 09:30:22 config: llama2.Config{Dim:768, HiddenDim:2048, NumLayers:12, NumHeads:12, NumKVHeads:12, VocabSize:32000, SeqLen:1024}
 <s>
@@ -31,20 +32,15 @@ Once upon a time, there was a boy named Timmy. Timmy was very hungry and wanted 
 ?" His mom said, "We are having chicken and rice." Timmy said, "Yum! I love chicken and rice."
 While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to watch a movie after
 2023/07/29 09:30:58 achieved tok/s: 28.619646
-````
-
-### Differences from `llama2.c`
-
-* for checkpoint not using `mmap`, instead scanning file
+```
 
 ### Performance
 
-| system                  | model           | [llama2.c](http://github.com/karpathy/llama2.c) | [llama.cpp](https://github.com/ggerganov/llama.cpp) | llama2.go (simple) | llama2.go (fast)   |
-| ------------------------| --------------- | ------------: | -----------------: | -----------------: | -----------------: |
-| Apple M1 Max 10CPU 64GB | stories42M      |  265.35 tok/s |                    |        25.68 tok/s |        82.79 tok/s |
-| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |                    |        10.47 tok/s |        39.28 tok/s |  
-| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |        20.36 tok/s |                    |         0.87 tok/s | 
-| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |        11.71 tok/s |                    |         0.38 tok/s |
+| system                  | model           | `llama2.c`    | `llama.cpp`        | `llama2.go` (simple) | `llama2.go` (fast)   |
+| ------------------------| --------------- | ------------: | -----------------: | -------------------: | -------------------: |
+| Apple M1 Max 10CPU 64GB | stories110M     |  101.84 tok/s |                    |          10.47 tok/s |          39.28 tok/s |  
+| Apple M1 Max 10CPU 64GB | llama2_7b       |    1.83 tok/s |        20.36 tok/s |                      |           0.87 tok/s | 
+| Apple M1 Max 10CPU 64GB | llama2_13b      |    (segfault) |        11.71 tok/s |                      |           0.38 tok/s |
 
 ### Optimizations
 
@@ -57,7 +53,7 @@ While they were eating, Timmy's dad came in and said, "Hey Timmy, do you want to
 All optimizations are `Fuzz`-tested against basic algorithm, which is itself tested.
 To disable optimizations update `llama2/transformer.go` import to package without optimizations and rebuild.
 
-### Related Work
+### Related Work and References
 
 * https://github.com/karpathy/llama2.c
 * https://github.com/poudels14/llama2_rs (`llama2.c` Rust port)
@@ -67,32 +63,6 @@ To disable optimizations update `llama2/transformer.go` import to package withou
 * https://github.com/gotzmann/llama.go (`llama.cpp` port in Go)
 * https://github.com/go-skynet/go-llama.cpp (`cgo` bidning `llama.cpp`)
 * https://github.com/go-skynet/LocalAI (`cgo` binding API of many models)
-
-### Appendix A: Inference Architecture
-
-![](./doc/llama2.svg)
-
-### Appendix B: Go comments in fields
-
-It is important to isolate comment for group from comment for field so that IDE detects and suggests correct comment for field (the one on the right) rather then one above it for the whole group.
-
-bad, IDE will suggest `// weights for mat muls` for `WQ`:
-```go
-type TransformerWeights struct {
-	// weights for mat muls
-	WQ []float32 // (num_layers, dim, dim)
-	WK []float32 // (num_layers, dim, dim)
-	WV []float32 // (num_layers, dim, dim)
-	WO []float32 // (num_layers, dim, dim)
-```
-
-good, IDE will suggest `// (num_layers, dim, dim)` for `WQ`:
-```go
-type TransformerWeights struct {
-	// weights for mat muls
-
-	WQ []float32 // (num_layers, dim, dim)
-	WK []float32 // (num_layers, dim, dim)
-	WV []float32 // (num_layers, dim, dim)
-	WO []float32 // (num_layers, dim, dim)
-```
+* https://github.com/ggerganov/llama.cpp
+* [RoPE](https://arxiv.org/pdf/2104.09864.pdf)
+* ["Attention Is All You Need"](https://arxiv.org/pdf/1706.03762.pdf)
