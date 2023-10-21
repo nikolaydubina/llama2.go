@@ -1,8 +1,8 @@
-## llama2.go
-
 <p align="center">
-  <img src="assets/logo.png" width="300" height="300">
+  <img width="300" height="300" src="https://github.com/nikolaydubina/llama2.go/assets/2933061/689ae580-2a57-48f9-b57f-d549eaa40f4d">
 </p>
+
+## llama2.go
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/nikolaydubina/llama2.go)](https://goreportcard.com/report/github.com/nikolaydubina/llama2.go)
 [![codecov](https://codecov.io/gh/nikolaydubina/llama2.go/branch/master/graph/badge.svg?token=OMf0git2BD)](https://codecov.io/gh/nikolaydubina/llama2.go)
