@@ -70,6 +70,7 @@ To disable optimizations update `llama2/transformer.go` import to package withou
 * https://github.com/ggerganov/llama.cpp
 * [RoPE](https://arxiv.org/pdf/2104.09864.pdf)
 * ["Attention Is All You Need"](https://arxiv.org/pdf/1706.03762.pdf)
+* [Llama2 Ports Extensive Benchmark Results on Mac M1 Max](https://engiware.com/benchmark/llama2-ports-extensive-benchmarks-mac-m1-max.html)
 
 
 [^simple]: No linear algebra optimizations
