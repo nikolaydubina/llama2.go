@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="300" height="300" src="https://github.com/nikolaydubina/llama2.go/assets/2933061/689ae580-2a57-48f9-b57f-d549eaa40f4d">
+  <img width="300" height="300" src="https://github.com/nikolaydubina/llama2.go/assets/2933061/3b87b9cc-1f53-4caa-ba67-e2b6bdde4806">
 </p>
 
 ## llama2.go
