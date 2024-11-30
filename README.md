@@ -13,6 +13,9 @@ This is a native Go inference of [LLaMA-2](https://ai.meta.com/llama/), as of `2
 It is ported from [github.com/karpathy/llama2.c](https://github.com/karpathy/llama2.c)@[`bd18228`](https://github.com/karpathy/llama2.c/commit/bd182289c596fa6059eb7b3b7c8ccd04b5c90fc3) on `2023-08-19`.
 Additional features may be added.
 
+> [!NOTE]  
+> `2024-11-30` giving that performance is absolutely critical for LLM workloads, archiving this project until the time when Go CPU has comprable performance to C++ (e.g. vector instructions) and have native CUDA support
+
 ### How to run?
 
 1. get `tokenizer.bin` from [llama2.c](https://github.com/karpathy/llama2.c)
